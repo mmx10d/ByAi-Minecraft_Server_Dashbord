@@ -1,59 +1,69 @@
 import { spawn } from 'child_process';
-import EventEmitter from 'events';
+import { EventEmitter } from 'events';
 
 class MinecraftServer extends EventEmitter {
-  constructor(jarName = 'paper.jar', memory = '2G') {
+  constructor(jarFile = 'server.jar', memory = '2G') {
     super();
-    this.jarName = jarName;
+    this.jarFile = jarFile;
     this.memory = memory;
     this.process = null;
-    this.isRunning = false;
   }
 
   start() {
-    if (this.isRunning) return;
+    if (this.process) {
+      this.emit('log', '[SYSTEM]: Server is already running.');
+      return;
+    }
 
-    // تشغيل سيرفر ماين كرافت كعملية فرعية خلف الكواليس
+    // تشغيل عملية الجافا في الخلفية
     this.process = spawn('java', [
       `-Xmx${this.memory}`,
       `-Xms${this.memory}`,
       '-jar',
-      this.jarName,
+      this.jarFile,
       'nogui'
     ]);
 
-    this.isRunning = true;
-    this.emit('status', 'running');
-
-    // قراءة بث البيانات العادية من السيرفر
+    // 🔥 هنا السر: قراءة مخرجات السيرفر الحية وتمريرها عبر الـ Event
     this.process.stdout.on('data', (data) => {
-      this.emit('console', data.toString().trim());
+      const output = data.toString().trim();
+      this.emit('log', output); // إرسال النص إلى ملف index.js
+
+      // إذا اشتغل السيرفر بالكامل، أرسل حدث الجاهزية
+      if (output.includes('Done')) {
+        this.emit('ready');
+      }
     });
 
-    // قراءة بث الأخطاء
+    // قراءة الأخطاء وتمريرها أيضاً
     this.process.stderr.on('data', (data) => {
-      this.emit('console', `[ERROR]: ${data.toString().trim()}`);
+      this.emit('log', `[JAVA ERROR]: ${data.toString().trim()}`);
     });
 
-    // مراقبة توقف أو إغلاق السيرفر مفاجئاً أو بطلب منك
+    // التعامل مع إغلاق السيرفر
     this.process.on('close', (code) => {
-      this.isRunning = false;
+      this.emit('log', `[SYSTEM]: Server stopped with code ${code}`);
       this.process = null;
-      this.emit('status', 'stopped');
-      this.emit('console', `Server exited with code ${code}`);
+      this.emit('stop');
     });
   }
 
-  // إرسال الأوامر المباشرة لكونسول اللعبة
+  // دالة إرسال الأوامر من الكونسل إلى السيرفر
+  // دالة إرسال الأوامر المعدلة والمتوافقة مع نظام التشغيل لمنع الكراش
   sendCommand(command) {
-    if (!this.isRunning || !this.process) return;
-    this.process.stdin.write(command + '\n');
+    // استيراد os المدمج محلياً لمعرفة رمز السطر الجديد الفعلي للجهاز
+    import('os').then((os) => {
+      if (this.process && this.process.stdin && this.process.stdin.writable) {
+        // استخدام os.EOL بدلاً من '\n' لضمان قراءة ماين كرافت للأمر بدون كراش
+        this.process.stdin.write(command + os.EOL);
+      } else {
+        this.emit('log', '[SYSTEM]: Cannot send command. Server is offline or stdin is closed.');
+      }
+    }).catch(err => {
+      if (this.process && this.process.stdin) this.process.stdin.write(command + '\n');
+    });
   }
 
-  stop() {
-    if (!this.isRunning) return;
-    this.sendCommand('stop');
-  }
 }
 
 export default MinecraftServer;

@@ -1,105 +1,148 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" id="main-html">
 
 <head>
   <meta charset="UTF-8">
-  <title>لوحة تحكم ماين كرافت</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      background: #1e1e1e;
-      color: #fff;
-      padding: 20px;
-    }
-
-    #console {
-      background: #000;
-      height: 400px;
-      overflow-y: scroll;
-      padding: 10px;
-      font-family: monospace;
-      border: 1px solid #444;
-      border-radius: 5px;
-      margin-bottom: 10px;
-      white-space: pre-wrap;
-    }
-
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      margin-right: 5px;
-      border: none;
-      border-radius: 3px;
-    }
-
-    .start {
-      background: #28a745;
-      color: white;
-    }
-
-    .stop {
-      background: #dc3545;
-      color: white;
-    }
-
-    #input-cmd {
-      width: 80%;
-      padding: 10px;
-      background: #333;
-      color: white;
-      border: 1px solid #555;
-    }
-
-    #status {
-      font-weight: bold;
-      margin-bottom: 10px;
-    }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minecraft Node Manager</title>
+  <!-- استدعاء مكتبة الـ Sockets والـ FontAwesome للأيقونات -->
+  <script src="/socket.io/socket.io.js"></script>
+  <link rel="stylesheet" href="https://cloudflare.com">
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
-  <h2>لوحة تحكم السيرفر الذكية (ESM) 🎮</h2>
-  <div id="status">الحالة: جاري التحقق...</div>
+  <div class="split-container">
+    <!-- النصف الأيمن (50%): لوحة التحكم والتبويبات والمراقبة -->
+    <div class="right-panel">
+      <div class="header-controls">
+        <h2 id="txt-title"><i class="fa-solid fa-sliders"></i> لوحة التحكم</h2>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <!-- زر تبديل لغة الواجهة ديناميكياً -->
+          <button id="lang-toggle-btn" onclick="toggleLanguage()" class="lang-btn"><i class="fa-solid fa-globe"></i>
+            English</button>
+          <span id="status-indicator" class="status-stopped">OFFLINE</span>
+          <div class="controls">
+            <button id="btn-start" class="btn-start" onclick="sendAction('start')"><i class="fa-solid fa-play"></i>
+              <span id="txt-start">تشغيل</span></button>
+            <button id="btn-stop" class="btn-stop" onclick="sendAction('stop')" style="display:none;"><i
+                class="fa-solid fa-stop"></i> <span id="txt-stop">إيقاف</span></button>
+          </div>
+        </div>
+      </div>
 
-  <button class="start" onclick="sendControl('start')">تشغيل السيرفر</button>
-  <button class="stop" onclick="sendControl('stop')">إيقاف السيرفر</button>
+      <!-- شريط الأنميشن الحركي الذكي (يظهر فقط أثناء الـ Preparing لتهيئة السيرفر) -->
+      <div id="loader-bar" class="progress-bar-container">
+        <div class="progress-bar-fill"></div>
+      </div>
 
-  <h3>شاشة المخرجات (Console):</h3>
-  <div id="console"></div>
+      <!-- كروت مراقبة موارد واستخدام الرام والمعالج الدقيقة ومعلومات الـ IP -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <h4 id="txt-ram-title"><i class="fa-solid fa-microchip"></i> استهلاك الذاكرة (RAM)</h4>
+          <p id="ram-stat">0% (0 / 0 GB)</p>
+        </div>
+        <div class="stat-card">
+          <h4 id="txt-cpu-title"><i class="fa-solid fa-gauge-high"></i> استهلاك المعالج (CPU)</h4>
+          <p id="cpu-stat">0%</p>
+        </div>
+        <div class="stat-card server-info-card">
+          <h4 id="txt-ip-title"><i class="fa-solid fa-network-wired"></i> عنوان السيرفر (Local IP)</h4>
+          <p id="ip-stat">0.0.0.0:25565</p>
+        </div>
+        <div class="stat-card server-info-card">
+          <h4 id="txt-os-title"><i class="fa-solid fa-server"></i> نظام التشغيل المضيف</h4>
+          <p id="os-stat">---</p>
+        </div>
+      </div>
 
-  <input type="text" id="input-cmd" placeholder="اكتب أمر هنا واضغط Enter..." onkeydown="checkEnter(event)">
+      <!-- ميزة التحقق والموافقة على الـ EULA من المتصفح -->
+      <div id="eula-box" class="eula-card">
+        ⚠️ <strong id="txt-eula-warn">اتفاقية ماين كرافت (EULA):</strong> يجب عليك الموافقة على شروط شركة Mojang لتشغيل
+        السيرفر.
+        <br><button onclick="acceptEula()" id="txt-eula-btn">أوافق على الاتفاقية (Agree)</button>
+      </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const consoleDiv = document.getElementById('console');
-    const statusDiv = document.getElementById('status');
+      <div class="tabs-nav">
+        <button id="tab-players-btn" class="tab-btn active" onclick="switchTab('players-tab', this)"><i
+            class="fa-solid fa-users"></i> اللاعبين</button>
+        <button id="tab-logs-btn" class="tab-btn" onclick="switchTab('logs-tab', this)"><i
+            class="fa-solid fa-file-lines"></i> السجلات (Logs)</button>
+        <button id="tab-plugins-btn" class="tab-btn" onclick="switchTab('plugins-tab', this)"><i
+            class="fa-solid fa-puzzle-piece"></i> الإضافات</button>
+        <button id="tab-world-btn" class="tab-btn" onclick="switchTab('world-tab', this)"><i
+            class="fa-solid fa-earth-americas"></i> العالم</button>
+      </div>
 
-    socket.on('status', (status) => {
-      statusDiv.innerText = `الحالة: ${status === 'running' ? 'يعمل بنشاط 🟢' : 'متوقف 🔴'}`;
-    });
+      <!-- محتويات التبويبات -->
+      <div id="players-tab" class="tab-content active">
+        <h3 id="txt-online-players">اللاعبين المتصلين</h3>
+        <div id="players-list">
+          <p class="placeholder" id="txt-no-players">لا يوجد لاعبين حالياً.</p>
+        </div>
+      </div>
 
-    socket.on('console', (line) => {
-      consoleDiv.innerText += line + '\n';
-      consoleDiv.scrollTop = consoleDiv.scrollHeight;
-    });
+      <div id="logs-tab" class="tab-content">
+        <h3 id="txt-sys-logs-title">سجلات العمليات الخلفية المستقلة (Logs)</h3>
+        <div id="system-logs-box" class="logs-container">--- System events flow here ---</div>
+      </div>
 
-    function sendControl(action) {
-      socket.emit('control', action);
-    }
+      <div id="plugins-tab" class="tab-content">
+        <h3 id="txt-plugins-title">إدارة المودات والبلوجنز</h3>
+        <input type="file" id="plugin-file-input" accept=".jar" style="display: none;" onchange="uploadPluginFile()">
+        <button class="action-btn" onclick="document.getElementById('plugin-file-input').click()"><i
+            class="fa-solid fa-cloud-arrow-up"></i> <span id="txt-btn-plugin">رفع ملف Plugin (.jar)</span></button>
+        <div id="plugin-status" style="margin-top: 10px; color: var(--color-blue);"></div>
+      </div>
 
-    function checkEnter(event) {
-      if (event.key === 'Enter') {
-        const input = document.getElementById('input-cmd');
-        if (input.value.trim() !== '') {
-          socket.emit('command', input.value);
-          input.value = '';
-        }
-      }
-    }
-  </script>
+      <div id="world-tab" class="tab-content">
+        <h3 id="txt-world-title">ملفات وإعدادات العالم</h3>
+        <input type="file" id="world-file-input" accept=".zip" style="display: none;" onchange="uploadWorldFile()">
+
+        <div class="world-actions">
+          <button class="action-btn-green" onclick="document.getElementById('world-file-input').click()"><i
+              class="fa-solid fa-upload"></i> <span id="txt-btn-world-upload">رفع حزمة عالم جديدة (.zip)</span></button>
+          <button class="action-btn-blue" onclick="applyUploadedWorld()"><i class="fa-solid fa-check"></i> <span
+              id="txt-btn-world-apply">تطبيق العالم المرفوع</span></button>
+          <button class="action-btn-danger" onclick="openRegenModal()"><i class="fa-solid fa-rotate-left"></i> <span
+              id="txt-btn-world-regen">إعادة إنشاء العالم الافتراضي</span></button>
+        </div>
+
+        <!-- واجهة خيارات تفاصيل العالم المتقدمة عند إعادة الإنشاء -->
+        <div id="regen-modal" class="custom-modal">
+          <h4 id="txt-modal-title">تعديل إعدادات إعادة الإنشاء</h4>
+          <label id="txt-modal-gm">الوضع الافتراضي (Gamemode):</label>
+          <select id="world-gamemode">
+            <option value="survival" id="opt-survival">Survival (بقاء)</option>
+            <option value="creative" id="opt-creative">Creative (إبداعي)</option>
+            <option value="adventure" id="opt-adventure">Adventure (مغامرة)</option>
+          </select>
+          <br><br>
+          <label id="txt-modal-type">نوع العالم (World Type):</label>
+          <select id="world-type">
+            <option value="normal" id="opt-normal">Normal (عادي)</option>
+            <option value="flat" id="opt-flat">Flat (مسطح)</option>
+            <option value="large-biomes" id="opt-large">Large Biomes (تضاريس عملاقة)</option>
+          </select>
+          <br><br>
+          <button onclick="submitWorldRegen()" id="txt-modal-confirm">تأكيد وإعادة الإنشاء</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- النصف الأيسر (50%): مخصص بالكامل وبشكل مستقل للكونسل الفوري بالإنجليزية الصارمة -->
+    <div class="left-panel">
+      <h3><i class="fa-solid fa-terminal"></i> Live Console Output</h3>
+      <div id="console-log">--- Awaiting live server transmission ---</div>
+      <div class="console-input">
+        <input type="text" id="cmd-input" placeholder="Type minecraft command here and press Enter..."
+          onkeypress="executeCommand(event)">
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
 </body>
 
 </html>
