@@ -1,0 +1,28 @@
+#لن يتم تجاهل الملفات الاساسيه في البناء
+
+#تجاهل مجلد الموديلز
+node_module/
+
+
+#تجاهل الملفات الغير اساسيه
+cache/
+config/
+libraries/
+logs/
+node_modules/
+plugins/
+versions/
+world/
+banned-ips.json
+banned-players.json
+bukkit.yml
+commands.yml
+eula.txt
+help.yml
+ops.json
+permissions.yml
+server.properties
+spigot.yml
+usercache.json
+version_history.json
+whitelist.json

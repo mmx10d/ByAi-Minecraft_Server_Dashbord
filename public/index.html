@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>لوحة تحكم ماين كرافت</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1e1e1e;
+      color: #fff;
+      padding: 20px;
+    }
+
+    #console {
+      background: #000;
+      height: 400px;
+      overflow-y: scroll;
+      padding: 10px;
+      font-family: monospace;
+      border: 1px solid #444;
+      border-radius: 5px;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-right: 5px;
+      border: none;
+      border-radius: 3px;
+    }
+
+    .start {
+      background: #28a745;
+      color: white;
+    }
+
+    .stop {
+      background: #dc3545;
+      color: white;
+    }
+
+    #input-cmd {
+      width: 80%;
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: 1px solid #555;
+    }
+
+    #status {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>لوحة تحكم السيرفر الذكية (ESM) 🎮</h2>
+  <div id="status">الحالة: جاري التحقق...</div>
+
+  <button class="start" onclick="sendControl('start')">تشغيل السيرفر</button>
+  <button class="stop" onclick="sendControl('stop')">إيقاف السيرفر</button>
+
+  <h3>شاشة المخرجات (Console):</h3>
+  <div id="console"></div>
+
+  <input type="text" id="input-cmd" placeholder="اكتب أمر هنا واضغط Enter..." onkeydown="checkEnter(event)">
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const consoleDiv = document.getElementById('console');
+    const statusDiv = document.getElementById('status');
+
+    socket.on('status', (status) => {
+      statusDiv.innerText = `الحالة: ${status === 'running' ? 'يعمل بنشاط 🟢' : 'متوقف 🔴'}`;
+    });
+
+    socket.on('console', (line) => {
+      consoleDiv.innerText += line + '\n';
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    });
+
+    function sendControl(action) {
+      socket.emit('control', action);
+    }
+
+    function checkEnter(event) {
+      if (event.key === 'Enter') {
+        const input = document.getElementById('input-cmd');
+        if (input.value.trim() !== '') {
+          socket.emit('command', input.value);
+          input.value = '';
+        }
+      }
+    }
+  </script>
+</body>
+
+</html>
