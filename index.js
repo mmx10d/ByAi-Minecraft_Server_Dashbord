@@ -81,17 +81,18 @@ wss.on('connection', (ws) => {
           minecraft.server.executeCommand(payload.command);
           break;
         case 'GET_HOST_STATS':
-          // تجميع بيانات الجهاز الحية وإعادتها فوراً للواجهة المستقلة لتحديث الشاشة
           ws.send(JSON.stringify({
             type: 'HOST_STATS',
             data: {
               status: minecraft.info.getServerStatus(),
               ram: minecraft.host.getRamUsage(),
               cpu: minecraft.host.getCpuUsage(),
-              playersCount: minecraft.info.getOnlinePlayersList().length
+              playersCount: minecraft.info.getOnlinePlayersList().length,
+              playersOnline: minecraft.info.getOnlinePlayersList() // تمرير مصفوفة الأسماء الحية هنا!
             }
           }));
           break;
+
         default:
           ws.send(JSON.stringify({ type: 'ERROR', data: 'Unknown Action Request' }));
       }
