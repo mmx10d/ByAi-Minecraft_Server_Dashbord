@@ -1,19 +1,49 @@
-const { executeCommand } = require('./server.js');
+// ========================================================
+// ⚙️ [ملف information.js المطور - الجزء 1 من 2]
+// مسارات النظام، تحليل ملفات JSON الحية للاعبين من القرص، وحالة السيرفر
+// ========================================================
+
 const fs = require('fs');
 const path = require('path');
 
+// تحديد المسارات الصارمة لملفات إعدادات ماين كرافت الرئيسية في المجلد الرئيسي
 const propertiesPath = path.join(__dirname, '../server.properties');
+const opsPath = path.join(__dirname, '../ops.json');
+const whitelistPath = path.join(__dirname, '../whitelist.json');
+const bannedPlayersPath = path.join(__dirname, '../banned-players.json');
+const bannedIpsPath = path.join(__dirname, '../banned-ips.json');
 
-// مصفوفة داخلية لتخزين أسماء اللاعبين أونلاين بشكل حي ومستقر
+// متغيرات الذاكرة الحية المؤقتة
 let isServerOnline = false;
 let onlinePlayersList = [];
 
 /**
- * دالة ذكية جداً تعتمد على الـ RegEx لتحليل الكونسل ورصد اللاعبين بدقة
- * @param {string} logLine - السطر القادم من مخرجات السيرفر (stdout)
+ * دالة مساعدة داخلية لقراءة ملفات الـ JSON الخاصة بماين كرافت وتحليلها بأمان من القرص
+ */
+function readMinecraftJson(filePath) {
+  if (!fs.existsSync(filePath)) return [];
+  try {
+    const content = fs.readFileSync(filePath, 'utf8').trim();
+    if (!content) return [];
+    const parsed = JSON.parse(content);
+
+    // ملف ops.json يحتوي على كائنات بداخلها حقل name، بينما الآخرين قد يختلفون
+    return parsed.map(entry => {
+      if (typeof entry === 'object') {
+        return entry.name || entry.ip || entry.target || 'مجهول';
+      }
+      return entry;
+    });
+  } catch (error) {
+    console.error(`[Smart Information ERROR]: فشل قراءة أو تحليل الملف ${path.basename(filePath)}:`, error);
+    return [];
+  }
+}
+
+/**
+ * دالة ذكية جداً تعتمد على الـ RegEx لتحليل الكونسل ورصد اللاعبين بدقة عند الدخول والخروج حياً
  */
 function parseServerLog(logLine) {
-  // 1. التحقق من حالة السيرفر العامة
   if (logLine.includes('Done') && logLine.includes('For help, type "help"')) {
     isServerOnline = true;
   }
@@ -22,9 +52,8 @@ function parseServerLog(logLine) {
     onlinePlayersList = [];
   }
 
-  // 2. فحص رصد دخول اللاعبين الفعلي عبر النمط العالمي
+  // فحص رصد دخول اللاعبين عبر النمط العالمي الصارم
   if (logLine.includes('joined the game')) {
-    // نمط RegEx يبحث عن أي نص يقع قبل كلمة joined the game مباشرة وينظفه من بيانات الوقت والـ INFO
     const joinMatch = logLine.match(/([a-zA-Z0-9_]+)\s+joined the game/);
     if (joinMatch && joinMatch[1]) {
       const playerName = joinMatch[1].trim();
@@ -35,7 +64,7 @@ function parseServerLog(logLine) {
     }
   }
 
-  // 3. فحص رصد خروج اللاعبين الفعلي عبر النمط العالمي
+  // فحص رصد خروج اللاعبين عبر النمط العالمي الصارم
   if (logLine.includes('left the game')) {
     const leaveMatch = logLine.match(/([a-zA-Z0-9_]+)\s+left the game/);
     if (leaveMatch && leaveMatch[1]) {
@@ -52,9 +81,13 @@ function parseServerLog(logLine) {
 function getServerStatus() {
   return isServerOnline ? 'ONLINE' : 'OFFLINE';
 }
+// ========================================================
+// ⚙️ [ملف information.js المطور - الجزء 2 من 2]
+// دوال تصدير القوائم الأربعة الحية (OP, Whitelist, Ban, Ban-IP) والتصدير العام
+// ========================================================
 
 /**
- * دالة لجلب الحد الأقصى للاعبين
+ * دالة لجلب الحد الأقصى للاعبين المسموح به من ملف server.properties
  */
 function getTotalPlayers() {
   if (!fs.existsSync(propertiesPath)) return 20;
@@ -63,26 +96,64 @@ function getTotalPlayers() {
     const lines = content.split('\n');
     for (let line of lines) {
       if (line.trim().startsWith('max-players=')) {
-        return parseInt(line.split('=')[1].trim(), 10) || 20;
+        const parts = line.split('=');
+        return parseInt(parts[1].trim(), 10) || 20;
       }
     }
   } catch (error) {
-    console.error('[Information Manager ERROR]:', error);
+    console.error('[Information Manager ERROR]: فشل قراءة الحد الأقصى للاعبين:', error);
   }
   return 20;
 }
 
 /**
- * دالة جوهرية لملف index.js وبوت تلجرام لإرجاع قائمة اللاعبين الفعليين حالياً
- * @returns {Array<string>} مصفوفة بأسماء اللاعبين الفعليين
+ * دالة إرجاع قائمة اللاعبين المتصلين حياً حالياً بالسيرفر
+ * @returns {Array<string>} مصفوفة بأسماء اللاعبين أونلاين
  */
 function getOnlinePlayersList() {
   return onlinePlayersList;
 }
 
+/**
+ * ميزة جديدة: جلب قائمة الأدمنية والمسؤولين الذين يمتلكون رتبة (OP)
+ * @returns {Array<string>} مصفوفة بأسماء الأدمنية
+ */
+function getOpsList() {
+  return readMinecraftJson(opsPath);
+}
+
+/**
+ * ميزة جديدة: جلب قائمة اللاعبين المدرجين في القائمة البيضاء (Whitelist)
+ * @returns {Array<string>} مصفوفة بأسماء اللاعبين في الوايت لست
+ */
+function getWhitelistList() {
+  return readMinecraftJson(whitelistPath);
+}
+
+/**
+ * ميزة جديدة: جلب قائمة اللاعبين المحظورين نهائياً من السيرفر (Banned Players)
+ * @returns {Array<string>} مصفوفة بأسماء اللاعبين المحظورين
+ */
+function getBannedPlayersList() {
+  return readMinecraftJson(bannedPlayersPath);
+}
+
+/**
+ * ميزة جديدة: جلب قائمة عناوين الآي بي المحظورة من السيرفر (Banned IPs)
+ * @returns {Array<string>} مصفوفة بعناوين الآي بي المحظورة
+ */
+function getBannedIpsList() {
+  return readMinecraftJson(bannedIpsPath);
+}
+
+// تصدير واجهة الدوال البرمجية بالكامل لتغذية النواة والكلاينتس
 module.exports = {
   parseServerLog,
   getServerStatus,
   getTotalPlayers,
-  getOnlinePlayersList
+  getOnlinePlayersList,
+  getOpsList,
+  getWhitelistList,
+  getBannedPlayersList,
+  getBannedIpsList
 };
