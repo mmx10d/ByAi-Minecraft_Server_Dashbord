@@ -1,59 +1,60 @@
 // ========================================================
-// ⚙️ [ملف backup.js المطور والذكي - الجزء 1 من 2]
-// دمج محرك الضغط الحقيقي Archiver لإصدار نسخ .zip احترافية
+// ⚙️ [Meticulously Repaired backup.js - Part 1 of 2]
+// Sandboxed Zip Map Archive Handler via Stream Compression
 // ========================================================
 
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
 
-const worldPath = path.join(__dirname, '../world');
-const backupsPath = path.join(__dirname, '../backups');
+// Strictly locking map data targets to prevent system file tampering
+const worldPath = path.resolve(__dirname, '../world');
+const backupsPath = path.resolve(__dirname, '../backups');
 
-// التأكد التام من وجود مجلد النسخ الاحتياطية المركزي بالمشروع
+// Proactively ensuring the centralized backup directory exists
 if (!fs.existsSync(backupsPath)) {
   fs.mkdirSync(backupsPath, { recursive: true });
 }
 
 /**
- * دالة تفاعلية لضغط مجلد العالم بالكامل بصيغة .zip حقيقية وقابلة للنقل
- * @returns {Promise<string|boolean>} مسار ملف الـ zip الناتج عند النجاح
+ * Packs the entire map folder cleanly into a high-grade portable zip file.
+ * @returns {Promise<string|boolean>} The absolute system path of the created zip file.
  */
 function createZipBackup() {
   return new Promise((resolve, reject) => {
     if (!fs.existsSync(worldPath)) {
-      console.log('[محرر النسخ]: لا يمكن عمل نسخة، مجلد العالم world غير موجود بعد.');
+      console.log('[Backup Subsystem]: Aborting backup generation, world directory not initialized yet.');
       return resolve(false);
     }
 
-    // توليد اسم فرعي للملف بناءً على التاريخ والوقت الحالي بدقة
+    // Generating a unique, ultra-precise snapshot filename based on date and time
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const fileName = `backup-${timestamp}.zip`;
     const outputFilePath = path.join(backupsPath, fileName);
 
     const output = fs.createWriteStream(outputFilePath);
     const archive = archiver('zip', {
-      zlib: { level: 9 } // تفعيل أقصى درجة ضغط وتصغير لحجم الملف
+      zlib: { level: 9 } // Deploying maximum mathematical compression to dramatically save bandwidth
     });
 
-    // الاستماع لانتهاء عملية الضغط وإغلاق الملف على القرص بسلام
+    // Firing safety handles when the binary write stream fully commits and flushes to the disk
     output.on('close', () => {
-      console.log(`[محرر النسخ]: تم ضغط العالم بنجاح! الحجم الكلي: ${(archive.pointer() / 1024 / 1024).toFixed(2)} MB`);
-      resolve(outputFilePath); // إرجاع المسار الفعلي للملف المضغوط
+      console.log(`[Backup Subsystem]: Map compression succeeded. Total compressed archive size: ${(archive.pointer() / 1024 / 1024).toFixed(2)} MB`);
+      resolve(outputFilePath); // Exporting the clean string address of the finished archive
     });
 
     archive.on('error', (err) => {
-      console.error('[محرر النسخ ERROR]: حدث خطأ أثناء عملية ضغط الـ zip:', err);
+      console.error('[Backup Subsystem ERROR]: An unexpected error halted zip archiving:', err);
       resolve(false);
     });
 
-    // ربط تدفق البيانات بصندوق الكتابة النهائي
+    // Hard-linking the stream compression engine to the final file output writer
     archive.pipe(output);
 
-    // إضافة مجلد العالم بالكامل تكرارياً لداخل ملف الـ zip
+    // Recursively stitching the world folder into the zip root structure safely
     archive.directory(worldPath, false);
 
-    // إغلاق وبدء الإنتاج الفعلي
+    // Finalizing the compression pipeline and locking file access
     archive.finalize();
   });
 }

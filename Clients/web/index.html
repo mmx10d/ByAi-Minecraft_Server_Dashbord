@@ -1,6 +1,6 @@
 <!-- ========================================================== -->
-<!-- 🖥️ [ملف index.html المطور الفائق - الجزء 1 من 2] -->
-<!-- كروت الموارد، أزرار القدرة، ولوحة تعديل إعدادات السيرفر بالكامل -->
+<!-- 🖥️ [Hardened Administration Dashboard - Part 1 of 2] -->
+<!-- Operational Metrics, Command Anchors, & Live Configurations -->
 <!-- ========================================================== -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -16,11 +16,11 @@
 
   <div class="wrapper">
     <header>
-      <h1>⚡ لوحة الإدارة المتطورة</h1>
+      <h1>⚡ لوحة إدارة السيرفر المتطورة</h1>
       <div class="server-badge" id="badgeStatus">جاري فحص حالة الاتصال...</div>
     </header>
 
-    <!-- كروت الإحصائيات الفورية والموارد الحية للمضيف -->
+    <!-- Real-Time Host Engine Performance and Diagnostic Metrics -->
     <div class="stats-grid">
       <div class="stat-card status" id="cardStatus">
         <span class="stat-label">حالة السيرفر الحية</span>
@@ -40,16 +40,18 @@
       </div>
     </div>
 
-    <!-- صف أزرار التحكم بالقدرة والنسخ الاحتياطي الـ zip المباشر -->
+    <!-- Capability Toggles, Map Backups, and Total Reset Management Commands -->
     <div class="controls-row">
       <button class="btn btn-start" id="btnStart">▶ تشغيل السيرفر</button>
       <button class="btn btn-stop" id="btnStop">⏹ إيقاف آمن</button>
       <button class="btn btn-restart" id="btnRestart">🔄 إعادة تشغيل</button>
-      <button class="btn btn-backup" id="btnDownloadBackup">💾 تنزيل العالم الحالي (.zip)</button>
-      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث فوري للموارد</button>
+      <button class="btn btn-backup" id="btnDownloadBackup">💾 تنزيل الباك أب (.zip)</button>
+      <button class="btn btn-stop" style="background:#b30000;" onclick="triggerWorldRecreationConfirm()">🗺️ تصفير
+        وإعادة إنشاء العالم</button>
+      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث يدوي للموارد</button>
     </div>
 
-    <!-- ⚙️ لوحة إعدادات وخصائص السيرفر (Aternos Option Board) -->
+    <!-- Aternos-Equivalent Option Sync Grid with Localized Verification Indicators -->
     <div class="full-panel-section">
       <h3>⚙️ لوحة تعديل إعدادات وخصائص السيرفر الحية</h3>
       <div class="options-settings-grid">
@@ -72,28 +74,29 @@
           </select>
         </div>
         <div class="setting-opt-box">
-          <label>🔓 السماح بالحسابات المكركة (Crack):</label>
-          <button class="toggle-btn" id="toggleCrack" onclick="toggleServerFeature('online-mode')">مفعل (مكرك)</button>
+          <label>🔓 وضع الدخول المكرك (Crack):</label>
+          <button class="toggle-btn" id="toggleCrack" onclick="toggleServerFeature('online-mode')">---</button>
         </div>
         <div class="setting-opt-box">
-          <label>🛡️ تفعيل القائمة البيضاء (Whitelist):</label>
-          <button class="toggle-btn" id="toggleWhitelist" onclick="toggleServerFeature('white-list')">معطل</button>
+          <label>🛡️ القائمة البيضاء (Whitelist):</label>
+          <button class="toggle-btn" id="toggleWhitelist" onclick="toggleServerFeature('white-list')">---</button>
         </div>
         <div class="setting-opt-box">
           <label>👥 الحد الأقصى للاعبين (Max Players):</label>
           <div style="display:flex; gap:5px;">
-            <input type="number" id="setMaxPlayersInput" value="20" style="width:80px; padding:5px;">
+            <input type="number" id="setMaxPlayersInput" value="20"
+              style="width:80px; padding:5px; background:var(--bg-secondary); border:1px solid var(--border-color); color:#fff; border-radius:4px; text-align:center;">
             <button class="action-mini mini-op" onclick="saveMaxPlayersSetting()">حفظ</button>
           </div>
         </div>
       </div>
     </div>
     <!-- ========================================================== -->
-    <!-- 🖥️ [ملف index.html المطور الفائق - الجزء 2 من 2] -->
-    <!-- جداول اللاعبين، جرد الحساب (E)، متصفح ملفات العالم، واستدعاء السكربت -->
+    <!-- 🖥️ [Hardened Administration Dashboard - Part 2 of 2] -->
+    <!-- Real-Time Data Tables, File Tabs, & Custom Modal Anchors -->
     <!-- ========================================================== -->
-
-    <!-- 👥 شبكة الجداول الخمسة لإدارة قوائم السيرفر واللاعبين حياً -->
+    
+    <!-- Live Content Data Tables for Unified Server Monitoring -->
     <div class="management-grid">
       <div class="manage-box">
         <h3>👥 المتصلون حالياً (<span id="countOnline">0</span>)</h3>
@@ -116,69 +119,82 @@
         <div class="list-container" id="listBannedIps"></div>
       </div>
     </div>
-
-    <!-- 📦 لوحة كشف بيانات وجرد اللاعب المتقدمة (Inventory Style - E View) -->
-    <div class="full-panel-section id=" playerAdvancedView" style="display:none;">
+    
+    <!-- Unified Player Profiler Interface Panel (Held Items & Stats View) -->
+    <div class="full-panel-section" id="playerAdvancedView" style="display:none;">
       <div class="inventory-header">
-        <h3>🧰 نافذة جرد وبيانات الحساب المتقدمة: <span id="advPlayerName" style="color:var(--accent-blue);">---</span>
-        </h3>
+        <h3>🧰 تفاصيل وموارد اللاعب: <span id="advPlayerName" style="color:var(--accent-blue);">---</span></h3>
         <button class="action-mini mini-kick" onclick="closePlayerInventory()">❌ إغلاق النافذة</button>
       </div>
       <div class="inventory-grid">
-        <div class="inv-slot"><span class="inv-label">🆔 الـ UUID الرقمي:</span> <span id="invUuid"
-            class="inv-val">---</span></div>
-        <div class="inv-slot"><span class="inv-label">⏱️ إجمالي وقت اللعب:</span> <span id="invPlayTime"
-            class="inv-val">---</span></div>
-        <div class="inv-slot"><span class="inv-label">💀 عدد مرات الموت:</span> <span id="invDeaths"
-            class="inv-val">0</span></div>
-        <div class="inv-slot"><span class="inv-label">🦘 إجمالي القفزات:</span> <span id="invJumps"
-            class="inv-val">0</span>
-        </div>
+        <!-- Active Held In-Game Inventory Resources -->
+        <div class="inv-slot"
+          style="grid-column: 1 / -1; background: rgba(255, 215, 0, 0.03); border-color: rgba(255, 215, 0, 0.2); font-weight: bold; color: var(--accent-gold);">
+          🎒 الموارد والإحصائيات التي بحوزة اللاعب حالياً:</div>
         <div class="inv-slot"><span class="inv-label">⚔️ قتلى اللاعبين:</span> <span id="invPlayerKills"
             class="inv-val">0</span></div>
-        <div class="inv-slot"><span class="inv-label">🏹 قتلى الوحوش:</span> <span id="invMobKills"
-            class="inv-val">0</span>
-        </div>
+        <div class="inv-slot"><span class="inv-label">🏹 قتلى الوحوش (Mob Kills):</span> <span id="invMobKills"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🦘 إجمالي القفزات (Jumps):</span> <span id="invJumps"
+            class="inv-val">0</span></div>
         <div class="inv-slot"><span class="inv-label">🏆 الإنجازات المفتوحة (Advancements):</span> <span
             id="invAdvancements" class="inv-val">0</span></div>
+    
+        <!-- System Connection Variables Underneath -->
+        <div class="inv-slot"
+          style="grid-column: 1 / -1; background: rgba(0, 176, 255, 0.03); border-color: rgba(0, 176, 255, 0.2); font-weight: bold; color: var(--accent-blue); margin-top: 10px;">
+          ℹ️ معلومات الحساب والاتصال بالخادم:</div>
+        <div class="inv-slot"><span class="inv-label">🆔 المعرف الفريد UUID الرقمي:</span> <span id="invUuid"
+            class="inv-val" style="font-size:12px; color:var(--text-main);">---</span></div>
+        <div class="inv-slot"><span class="inv-label">⏱️ إجمالي وقت اللعب بالسيرفر:</span> <span id="invPlayTime"
+            class="inv-val">---</span></div>
+        <div class="inv-slot"><span class="inv-label">💀 عدد مرات الموت الإجمالية:</span> <span id="invDeaths"
+            class="inv-val" style="color:var(--accent-red);">0</span></div>
       </div>
     </div>
-
-    <!-- 📁 لوحة متصفح ومدير ملفات العالم وسيرفر ماين كرافت بالكامل (Aternos File Manager) -->
+    
+    <!-- Hardened Sandbox File Navigation (Exploration & Plugin Asset Deployer) -->
     <div class="full-panel-section">
       <div class="file-manager-header">
-        <h3>📁 مدير ومتصفح ملفات العالم والسيرفر</h3>
-        <div style="display: flex; gap: 8px; align-items: center;">
-          <span id="currentPathDisplay" style="color:var(--text-muted); font-family:monospace; font-size:13px;">المجلد
-            الرئيسي /</span>
-          <button class="action-mini mini-unban" onclick="browseFolder('')" title="العودة للمجلد الرئيسي">🏠
+        <div style="display:flex; gap:15px; align-items:center;">
+          <h3>📁 مدير ومتصفح ملفات السيرفر</h3>
+          <!-- Area Tab Buttons to Switch Directories Safely -->
+          <button class="action-mini mini-unban" id="tabWorldBtn" onclick="switchFileArea(false)"
+            style="padding: 6px 12px; font-size:12px; background:var(--accent-blue); color:#000;">🗺️ ملفات العالم
+            (World)</button>
+          <button class="action-mini mini-unban" id="tabPluginsBtn" onclick="switchFileArea(true)"
+            style="padding: 6px 12px; font-size:12px; background:transparent; color:var(--text-main); border:1px solid var(--border-color);">🔌
+            إضافات السيرفر (Plugins)</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+          <span id="currentPathDisplay"
+            style="color:var(--text-muted); font-family:monospace; font-size:13px;">/world</span>
+          <button class="action-mini mini-unban" onclick="browseFolder('')" title="العودة للمجلد الرئيسي المعزول">🏠
             الرئيسي</button>
           <button class="action-mini mini-unban" onclick="goBackFolder()" title="المجلد الأعلى">⬆️ للأعلى</button>
-          <label class="action-mini mini-op" style="cursor:pointer;" title="رفع ملف لهذا المجلد">
+          <label class="action-mini mini-op" id="lblUploadBtn" style="cursor:pointer;" title="رفع ملف لهذا المجلد">
             📥 رفع ملف <input type="file" id="fileUploadInput" onchange="handleFileUpload(this)" style="display:none;">
           </label>
         </div>
       </div>
-      <!-- جدول عرض الملفات الحية -->
-      <div class="file-browser-container" id="fileBrowserList">
-        <!-- الملفات والمجلدات ستحقن هنا برمجياً -->
-      </div>
+      <!-- File Explorer Tree List Mount Target -->
+      <div class="file-browser-container" id="fileBrowserList"></div>
     </div>
-
-    <!-- 📝 نافذة محرر النصوص السحابي لتعديل ملفات التكوين (File Content Editor) -->
+    
+    <!-- Scurry Cloud Text Engine Configuration Editor -->
     <div class="full-panel-section" id="fileEditorSection" style="display:none;">
       <div class="inventory-header">
         <h3>📝 محرر النصوص السحابي للملف: <span id="editingFileName" style="color:var(--accent-green);">---</span></h3>
         <div>
           <button class="action-mini mini-op" onclick="saveEditingFile()">💾 حفظ التعديلات</button>
-          <button class="action-mini mini-kick" onclick="closeFileEditor()">❌ إلغاء</button>
+          <button class="action-mini mini-kick" onclick="closeFileEditor()">❌ إغلاق</button>
         </div>
       </div>
       <textarea id="fileEditorTextArea" rows="15"
         style="width:100%; background:var(--bg-darker); border:1px solid var(--border-color); color:#fff; font-family:monospace; padding:15px; outline:none; border-radius:6px; font-size:13px; resize:vertical; line-height:1.5; margin-top:10px;"></textarea>
     </div>
-
-    <!-- صندوق حاوية الكونسل الاحترافي وشريط تنفيذ الأوامر السفلي -->
+    
+    <!-- Terminal Shell Broadcast Terminal Viewbox -->
     <div class="console-container">
       <div class="console-header">
         <span>شاشة الكونسل ومخرجات السيرفر الحية</span>
@@ -192,10 +208,25 @@
         <button class="btn-send" id="btnSend">تنفيذ</button>
       </div>
     </div>
-  </div>
-
-  <!-- استدعاء محرك السوكيت التفاعلي المطور كلياً والمستقل لإدارة الأحداث بالكامل -->
-  <script src="script.js"></script>
-</body>
-
-</html>
+    </div>
+    
+    <!-- Hardened Custom Prompt Overlay Boxes (Replacing Window Alert Interrupters) -->
+    <div id="customModalContainer" class="custom-modal-overlay" style="display:none;">
+      <div class="custom-modal-box">
+        <div class="custom-modal-header" id="customModalTitle">⚠️ تأكيد النظام الصارم</div>
+        <div class="custom-modal-body" id="customModalBody">هل أنت متأكد تماماً من تنفيذ هذا الإجراء الحساس؟</div>
+        <!-- Dynamic input string node injection for rename operations -->
+        <input type="text" id="customModalInput" class="console-input"
+          style="display:none; background:var(--bg-darker); border:1px solid var(--border-color); margin-top:15px; padding:10px; border-radius:6px; color:#fff;"
+          placeholder="اكتب الاسم الجديد هنا...">
+        <div class="custom-modal-footer">
+          <button class="btn-confirm-action" id="customModalConfirmBtn">تأكيد ونقر</button>
+          <button class="btn-cancel-action" id="customModalCancelBtn" onclick="closeCustomModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    
+    <script src="script.js"></script>
+    </body>
+    
+    </html>

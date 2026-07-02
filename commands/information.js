@@ -1,6 +1,6 @@
 // ========================================================
-// ⚙️ [ملف information.js المطور كلياً - الجزء 1 من 2]
-// مسارات القرص، تنظيف الألوان، وقراءة الـ JSON الأساسي وحالة السيرفر
+// ⚙️ [ملف information.js النظيف والمصلح - الجزء 1 من 2]
+// مسارات القرص، فلاتر الألوان، وقراءة الـ JSON وحالة السيرفر العامة
 // ========================================================
 
 const fs = require('fs');
@@ -51,7 +51,7 @@ function readMinecraftJson(filePath) {
 }
 
 /**
- * محرك الـ RegEx الصارم لتحليل الكونسل ورصد اللاعبين بدقة عند الدخول والخروج حياً
+ * محرك الـ RegEx الصارم والمصلح لرصد اللاعبين بدقة عند الدخول والخروج حياً ومنع الأرقام الزائدة
  */
 function parseServerLog(rawLogLine) {
   const logLine = cleanAnsiCodes(rawLogLine);
@@ -64,9 +64,10 @@ function parseServerLog(rawLogLine) {
     onlinePlayersList = [];
   }
 
+  // لقط الدخول بالاسم الصافي الصحيح التام من الكونسل
   if (logLine.includes('joined the game')) {
     const joinMatch = logLine.match(/([a-zA-Z0-9_]+)\s+joined the game/);
-    if (joinMatch && joinMatch) {
+    if (joinMatch && joinMatch[1]) {
       const playerName = joinMatch[1].trim();
       if (!onlinePlayersList.includes(playerName)) {
         onlinePlayersList.push(playerName);
@@ -75,9 +76,10 @@ function parseServerLog(rawLogLine) {
     }
   }
 
+  // لقط الخروج بالاسم الصافي الصحيح التام من الكونسل
   if (logLine.includes('left the game')) {
     const leaveMatch = logLine.match(/([a-zA-Z0-9_]+)\s+left the game/);
-    if (leaveMatch && leaveMatch) {
+    if (leaveMatch && leaveMatch[1]) {
       const playerName = leaveMatch[1].trim();
       onlinePlayersList = onlinePlayersList.filter(name => name !== playerName);
       console.log(`[Smart Tracker]: تم رصد خروج لاعب صافي: ${playerName}`);
@@ -89,7 +91,7 @@ function getServerStatus() {
   return isServerOnline ? 'ONLINE' : 'OFFLINE';
 }
 // ========================================================
-// ⚙️ [ملف information.js المطور كلياً - الجزء 2 من 2]
+// ⚙️ [ملف information.js النظيف والمصلح - الجزء 2 من 2]
 // محرك ربط الـ UUID وجلب إحصائيات اللاعبين المتقدمة من ملفات العالم
 // ========================================================
 
@@ -186,10 +188,10 @@ function getTotalPlayers() {
   if (!fs.existsSync(propertiesPath)) return 20;
   try {
     const content = fs.readFileSync(propertiesPath, 'utf8');
-    const lines = content.split('\n');
+    const lines = content.split(/\r?\n/);
     for (let line of lines) {
       if (line.trim().startsWith('max-players=')) {
-        return parseInt(line.split('=')[1].trim(), 10) || 20;
+        return parseInt(line.split('=').trim(), 10) || 20;
       }
     }
   } catch (error) {
@@ -214,5 +216,5 @@ module.exports = {
   getWhitelistList,
   getBannedPlayersList,
   getBannedIpsList,
-  getPlayerDataDetails // تصدير الدالة الحصرية المحدثة
+  getPlayerDataDetails
 };

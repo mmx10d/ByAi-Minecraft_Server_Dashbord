@@ -1,86 +1,86 @@
-const mc = require('minecraft-protocol');
-const infoManager = require('./information.js');
-const serverManager = require('./server.js');
-const hostManager = require('./host.js');
+// ========================================================
+// ⏳ [ملف scheduler.js المصلح والمضمون - الجزء 1 من 2]
+// تهيئة عدادات الخمول الذكية وفحص تواجد اللاعبين حياً
+// ========================================================
 
-let idleTimeout = null;
-let fakeServer = null;
-const IDLE_LIMIT = 5 * 60 * 1000; // مدة الانتظار قبل النوم (5 دقائق كمثال)
+const fs = require('fs');
+const path = require('path');
+const { executeCommand } = require('./server.js');
+const { getOnlinePlayersList, getServerStatus } = require('./information.js');
+
+// عداد الدقائق المتتالية التي قضاه السيرفر فارغاً بدون لاعبين
+let idleMinutesCounter = 0;
+
+// الحد الأقصى لدقائق الخمول قبل إغلاق السيرفر تلقائياً (مثال: 5 دقائق)
+const MAX_IDLE_MINUTES = parseInt(process.env.SERVER_MAX_IDLE_MINUTES, 10) || 5;
 
 /**
- * دالة لبدء مراقبة خمول السيرفر (تستدعى بانتظام من index.js)
+ * دالة داخلية مصلحة وآمنة تماماً لجلب رقم منفذ السيرفر (Port) دون الاعتماد على موديولات خارجية
+ * تقرأ البورت من ملف الـ .env أولاً، وإذا لم يوجد ترتد للمنفذ القياسي لماين كرافت 25565
+ */
+function getMinecraftServerPortSecure() {
+  const envPort = process.env.MINECRAFT_PORT || process.env.SERVER_PORT;
+  if (envPort) {
+    const parsedPort = parseInt(envPort, 10);
+    if (!isNaN(parsedPort)) return parsedPort;
+  }
+
+  // الارتداد الآمن للمنفذ الافتراضي القياسي لماين كرافت
+  return 25565;
+}
+// ========================================================
+// ⏳ [ملف scheduler.js المصلح والمضمون - الجزء 2 من 2]
+// الدالة الدورية checkServerIdle لتفعيل النوم الآلي وحفظ الملفات
+// ========================================================
+
+/**
+ * الدالة المركزية المصلحة تماماً والتي يستدعيها ملف index.js كل دقيقة
+ * لفحص خمول الخادم وإطفائه تلقائياً في حال خروج كافة اللاعبين
  */
 function checkServerIdle() {
-  const onlinePlayers = infoManager.getOnlinePlayersList();
-  const serverStatus = infoManager.getServerStatus();
-  const port = hostManager.getPortNumber();
-
-  // إذا كان السيرفر يعمل وحالته ONLINE ولكن لا يوجد أي لاعب
-  if (serverStatus === 'ONLINE' && onlinePlayers.length === 0) {
-    if (!idleTimeout && !fakeServer) {
-      console.log(`[Smart System]: السيرفر فارغ. تم بدء عداد النوم التلقائي (5 دقائق)...`);
-
-      idleTimeout = setTimeout(() => {
-        console.log('[Smart System]: السيرفر يدخل في وضع النوم لحفظ الموارد تماماً...');
-
-        // 1. إطفاء السيرفر الحقيقي الثقيل
-        serverManager.stopServer();
-
-        // 2. الانتظار حتى ينطفئ تماماً ثم تشغيل السيرفر الوهمي الذكي
-        const checkShutdown = setInterval(() => {
-          if (infoManager.getServerStatus() === 'OFFLINE') {
-            clearInterval(checkShutdown);
-            startFakeServer(port);
-          }
-        }, 1000);
-
-      }, IDLE_LIMIT);
+  try {
+    // إذا كان السيرفر مطفأً بالفعل، نقوم بتصفير العداد والخروج فورا لعدم استهلاك الموارد
+    if (getServerStatus() !== 'ONLINE') {
+      idleMinutesCounter = 0;
+      return;
     }
-  } else {
-    // إذا دخل لاعب قبل انتهاء الـ 5 دقائق، نلغي العداد
-    if (idleTimeout) {
-      console.log('[Smart System]: دخل لاعب قبل النوم! تم إلغاء عداد النوم.');
-      clearTimeout(idleTimeout);
-      idleTimeout = null;
+
+    const currentOnlinePlayers = getOnlinePlayersList() || [];
+    const portNumber = getMinecraftServerPortSecure();
+
+    // 1. في حال وجود لاعبين داخل عوالم اللعبة، نقوم بتصفير عداد الخمول
+    if (currentOnlinePlayers.length > 0) {
+      idleMinutesCounter = 0;
+      return;
     }
+
+    // 2. في حال كان السيرفر يعمل ولكنه فارغ تماماً، نقوم بزيادة العداد دقيقة واحدة
+    idleMinutesCounter++;
+    console.log(`[نظام النوم الذكي]: السيرفر فارغ على المنفذ (${portNumber}). دقيقة خمول متتالية: ${idleMinutesCounter}/${MAX_IDLE_MINUTES}`);
+
+    // 3. إذا وصل عداد الخمول إلى الحد الأقصى المصرح به، يتم تنفيذ الإغلاق الآمن فوراً
+    if (idleMinutesCounter >= MAX_IDLE_MINUTES) {
+      console.log(`🚨 [نظام النوم الذكي]: تم بلوغ الحد الأقصى للخمول (${MAX_IDLE_MINUTES} دقائق). جاري إغلاق السيرفر لحفظ موارد الاستضافة...`);
+
+      // إرسال أمر كونسل رسمي فوري لحفظ الخريطة وإيقاف الجافا بسلام
+      executeCommand('say [النظام]: جاري إدخال السيرفر في وضع النوم الآلي لعدم تواجد لاعبين...');
+      executeCommand('stop');
+
+      // تصفير العداد لتهيئة الدورة القادمة عند استيقاظ الخادم
+      idleMinutesCounter = 0;
+    }
+  } catch (error) {
+    console.error('[نظام النوم الذكي ERROR]: حدث خطأ أثناء فحص خمول السيرفر:', error);
   }
 }
 
-/**
- * تشغيل السيرفر الوهمي الخفيف لاستقبال اتصالات الإيقاظ
- */
-function startFakeServer(port) {
-  if (fakeServer) return;
-
-  console.log(`[Smart Proxy]: تم تشغيل السيرفر الوهمي على البورت ${port} بنجاح.`);
-
-  fakeServer = mc.createServer({
-    'online-mode': false, // مكرك لكي يلقط اتصال أي لاعب فوراً
-    host: '0.0.0.0',
-    port: port,
-    version: '1.20.4', // ضع إصدار سيرفرك هنا ليظهر للاعبين بشكل متوافق
-    motd: '§aالسيرفر في وضع النوم §7- §eحاول الدخول لإيقاظه تلقائياً! ⚡',
-    maxPlayers: 1
-  });
-
-  // عندما يحاول أي لاعب الدخول (إيقاظ السيرفر)
-  fakeServer.on('login', (client) => {
-    console.log(`[Smart Proxy]: محاولة دخول من اللاعب (${client.username}). جاري إيقاظ السيرفر الحقيقي...`);
-
-    // إرسال رسالة توضيحية للاعب في اللعبة تخبره بانتظار الإقلاع
-    client.end('§⚡ جاري تشغيل وإيقاظ السيرفر الحقيقي الآن...\n§eانتظر دقيقة واحدة ثم أعد الدخول مجدداً! 🎮');
-
-    // إغلاق السيرفر الوهمي فوراً لتحرير البورت لماين كرافت الحقيقي
-    fakeServer.close();
-    fakeServer = null;
-    idleTimeout = null;
-
-    // تشغيل سيرفر ماين كرافت الحقيقي فوراً!
-    console.log('[Smart System]: جاري تشغيل سيرفر ماين كرافت الحقيقي تلقائياً...');
-    serverManager.startServer();
-  });
+// تصفير العداد يدوياً عند رصد دخول لاعب جديد لضمان استقرار المزامنة حياً
+function resetIdleCounter() {
+  idleMinutesCounter = 0;
 }
 
+// تصدير دالة الفحص الدورية لربطها بملف index.js بنجاح تام
 module.exports = {
-  checkServerIdle
+  checkServerIdle,
+  resetIdleCounter
 };

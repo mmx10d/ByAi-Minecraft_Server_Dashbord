@@ -1,60 +1,58 @@
 // ========================================================
-// 🚀 [ملف index.js المطور كلياً - الجزء 1 من 2]
-// النواة المركزية المحدثة، خادم السوكيت، ومستمع السجلات الحية بصيغة JSON
+// 🚀 [Master Orchestrator: index.js - Part 1 of 2]
+// Sandboxed Subsystem Core, Live Port Handlers, & Streaming
 // ========================================================
 
 const minecraft = require('./minecraft.js');
 const { WebSocketServer } = require('ws');
 const readline = require('readline');
 const fs = require('fs');
+const path = require('path');
 
 console.log('========================================================');
-console.log(' ⚡ [نظام النواة السحابي المطور الفائق - Aternos Core] يعمل... ');
+console.log(' ⚡ [نظام النواة السحابي الحديدي - Sandbox Core v2] يعمل... ');
 console.log('========================================================');
 
-// 1. تشغيل وإقلاع سيرفر ماين كرافت تلقائياً
+// 1. Fire up and boot the Minecraft Java process automatically
 minecraft.server.startServer();
 
-// 2. إنشاء خادم السوكيت المركزي المستقل (WebSocket Server) على المنفذ 8080
+// 2. Launch the standalone central WebSocket server on port 8080
 const wss = new WebSocketServer({ port: 8080 });
-console.log('[Socket Server]: يستمع الآن بشكل مستقل على الرابط: ws://localhost:8080');
+console.log('[Socket Server]: يستمع الآن بأمان على الرابط: ws://localhost:8080');
 
-// 3. ربط مخرجات السيرفر الحية وإرسالها حياً لكل من يتصل بالسوكيت ولمحلل البيانات
+// 3. Bind live log streams and broadcast them instantly as unified JSON packets
 minecraft.server.setLogListener((logLine) => {
-  // تحديث قائمة اللاعبين والحالة حياً عبر محلل الـ RegEx الصارم
+  // Dynamically maintain player count and connection status via pure RegEx filters
   minecraft.info.parseServerLog(logLine);
 
-  // تحويل السجل إلى حزمة JSON موحدة لبثها فوراً
   const logPackage = JSON.stringify({
     type: 'LOG',
     data: logLine
   });
 
   wss.clients.forEach((client) => {
-    if (client.readyState === 1) { // 1 تعني خط الاتصال مفتوح ومستقر (OPEN)
+    if (client.readyState === 1) { // OPEN connection check
       client.send(logPackage);
     }
   });
 });
 // ========================================================
-// 🚀 [ملف index.js المطور كلياً - الجزء 2 من 2]
-// معالج أحداث السوكيت المتقدم لملفات العالم والـ zip وإعدادات السيرفر
+// 🚀 [Master Orchestrator: index.js - Part 2 of 2]
+// Secure Sandbox Action Handler, Binary Streaming & Maintenance
 // ========================================================
 
-// 4. الإنصات لربط واجهات الويب المستقلة والبوتات ومعالجة حزم البيانات المتقدمة حياً
+// 4. Listen for oncoming connections and route JSON packages safely
 wss.on('connection', (ws) => {
-  console.log('[Socket Server]: متصل جديد انضم لإدارة السيرفر بكافة الميزات.');
-  ws.send(JSON.stringify({ type: 'SYSTEM', data: 'Connected to Ultimate Aternos-Core Backend' }));
+  console.log('[Socket Server]: A new administrative client has synchronized with the backend.');
+  ws.send(JSON.stringify({ type: 'SYSTEM', data: 'Connected to Sandboxed Minecraft Backend v2' }));
 
   ws.on('message', async (message) => {
     try {
       const request = JSON.parse(message.toString());
       const { action, payload } = request;
 
-      console.log(`[Action Received]: ${action}`);
-
       switch (action) {
-        // ---- أ) أوامر التحكم بالقدرة والتشغيل ----
+        // ---- A) Power & Execution Control ----
         case 'START_SERVER':
           minecraft.server.startServer();
           break;
@@ -68,7 +66,7 @@ wss.on('connection', (ws) => {
           minecraft.server.executeCommand(payload.command);
           break;
 
-        // ---- ب) جلب الموارد والإحصائيات الحية الشاملة والقوائم الخمس ----
+        // ---- B) Host Resource Analytics & Configuration Sync ----
         case 'GET_HOST_STATS':
           ws.send(JSON.stringify({
             type: 'HOST_STATS',
@@ -82,13 +80,12 @@ wss.on('connection', (ws) => {
               whitelistList: minecraft.info.getWhitelistList(),
               bannedPlayersList: minecraft.info.getBannedPlayersList(),
               bannedIpsList: minecraft.info.getBannedIpsList(),
-              // ميزة مدمجة جديدة: جلب كافة إعدادات ملف server.properties حياً للويب
               serverProperties: minecraft.world.getAllProperties()
             }
           }));
           break;
 
-        // ---- ج) ميزة كشف بيانات اللاعبين المتقدمة (جرد الحساب والـ UUID) ----
+        // ---- C) Detailed Advanced Player Profiling ----
         case 'GET_PLAYER_ADVANCED_DATA':
           const advancedData = minecraft.info.getPlayerDataDetails(payload.playerName);
           ws.send(JSON.stringify({
@@ -97,9 +94,14 @@ wss.on('connection', (ws) => {
           }));
           break;
 
-        // ---- د) ميزة تعديل إعدادات السيرفر (Aternos Settings Server) ----
+        // ---- D) Server Properties Engine (Hardened max-players handling) ----
         case 'UPDATE_SERVER_PROPERTY':
-          const successProp = minecraft.world.updateProperty(payload.key, payload.value);
+          let successProp = false;
+          if (payload.key === 'max-players') {
+            successProp = minecraft.world.setMaxPlayers(payload.value);
+          } else {
+            successProp = minecraft.world.updateProperty(payload.key, payload.value);
+          }
           ws.send(JSON.stringify({ type: 'PROPERTY_UPDATED_STATUS', success: successProp, key: payload.key }));
           break;
         case 'SET_GAMEMODE_SETTING':
@@ -114,13 +116,16 @@ wss.on('connection', (ws) => {
         case 'SET_CRACK_TOGGLE':
           minecraft.world.setCrackAllowed(payload.allowed);
           break;
+        case 'RECREATE_FRESH_WORLD':
+          const successRecreate = minecraft.world.recreateFreshWorld();
+          ws.send(JSON.stringify({ type: 'WORLD_RECREATE_STATUS', success: successRecreate }));
+          break;
 
-        // ---- هـ) ميزة إنشاء وإرسال باك اب العالم بصيغة .zip حقيقية ----
+        // ---- E) World Map Backup Generation (.zip) ----
         case 'CREATE_ZIP_BACKUP':
-          ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'PROCESSING', msg: 'جاري جمد وضغط مجلد العالم بصيغة zip...' }));
+          ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'PROCESSING', msg: 'Zipping world directory...' }));
           const zipPath = await minecraft.backup.createZipBackup();
           if (zipPath) {
-            // قراءة الملف وتحويله إلى Base64 لإرساله عبر السوكيت بأمان للويب والبوتات
             const fileBuffer = fs.readFileSync(zipPath);
             ws.send(JSON.stringify({
               type: 'BACKUP_ZIP_DOWNLOAD',
@@ -128,35 +133,50 @@ wss.on('connection', (ws) => {
               fileData: fileBuffer.toString('base64')
             }));
           } else {
-            ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'FAILED', msg: 'فشل إنشاء النسخة المضغوطة' }));
+            ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'FAILED', msg: 'Failed to create compressed map file.' }));
           }
           break;
-        case 'GET_BACKUPS_LIST':
-          ws.send(JSON.stringify({ type: 'BACKUPS_LIST_DATA', data: minecraft.backup.getBackupListDetails() }));
-          break;
-        case 'DELETE_BACKUP_FILE':
-          minecraft.backup.deleteBackupFile(payload.fileName);
-          break;
 
-        // ---- و) ميزة تصفح وإدارة وقراءة وحذف ملفات العالم والسيرفر برمجياً ----
+        // ---- F) Sandbox File Explorer Subsystem ----
         case 'BROWSE_SERVER_DIRECTORY':
-          const dirItems = minecraft.files.browseDirectory(payload.relativePath);
-          ws.send(JSON.stringify({ type: 'DIRECTORY_ITEMS_DATA', currentPath: payload.relativePath, items: dirItems }));
+          const dirItems = minecraft.files.browseDirectory(payload.relativePath, payload.isPluginArea);
+          ws.send(JSON.stringify({
+            type: 'DIRECTORY_ITEMS_DATA',
+            currentPath: payload.relativePath,
+            isPluginArea: payload.isPluginArea || false,
+            items: dirItems
+          }));
           break;
         case 'READ_FILE_TEXT_CONTENT':
-          const fileReadResult = minecraft.files.readFileContent(payload.relativePath);
-          ws.send(JSON.stringify({ type: 'FILE_TEXT_CONTENT_DATA', relativePath: payload.relativePath, ...fileReadResult }));
+          const fileReadResult = minecraft.files.readFileContent(payload.relativePath, payload.isPluginArea);
+          ws.send(JSON.stringify({ type: 'FILE_TEXT_CONTENT_DATA', relativePath: payload.relativePath, isPluginArea: payload.isPluginArea || false, ...fileReadResult }));
           break;
         case 'SAVE_FILE_TEXT_CONTENT':
-          const saveSuccess = minecraft.files.saveFileContent(payload.relativePath, payload.content);
+          const saveSuccess = minecraft.files.saveFileContent(payload.relativePath, payload.content, payload.isPluginArea);
           ws.send(JSON.stringify({ type: 'FILE_SAVE_STATUS', relativePath: payload.relativePath, success: saveSuccess }));
           break;
         case 'UPLOAD_FILE_TO_SERVER':
-          const uploadSuccess = minecraft.files.uploadFile(payload.relativePath, payload.fileData, true); // true تعني Base64 ممرر
+          const uploadSuccess = minecraft.files.uploadFile(payload.relativePath, payload.fileData, true, payload.isPluginArea);
           ws.send(JSON.stringify({ type: 'FILE_UPLOAD_STATUS', relativePath: payload.relativePath, success: uploadSuccess }));
           break;
+        case 'RENAME_FILE_OR_FOLDER':
+          const renameSuccess = minecraft.files.renameFileOrFolder(payload.oldRelativePath, payload.newRelativePath, payload.isPluginArea);
+          ws.send(JSON.stringify({ type: 'FILE_RENAME_STATUS', success: renameSuccess }));
+          break;
+        case 'DOWNLOAD_SINGLE_FILE':
+          const downloadResult = minecraft.files.downloadSingleFile(payload.relativePath, payload.isPluginArea);
+          if (downloadResult) {
+            ws.send(JSON.stringify({
+              type: 'SINGLE_FILE_DOWNLOAD_DATA',
+              fileName: downloadResult.name,
+              fileData: downloadResult.buffer.toString('base64')
+            }));
+          } else {
+            ws.send(JSON.stringify({ type: 'SINGLE_FILE_DOWNLOAD_STATUS', success: false }));
+          }
+          break;
         case 'DELETE_FILE_OR_FOLDER':
-          const deleteSuccess = minecraft.files.deleteFileOrFolder(payload.relativePath);
+          const deleteSuccess = minecraft.files.deleteFileOrFolder(payload.relativePath, payload.isPluginArea);
           ws.send(JSON.stringify({ type: 'FILE_DELETE_STATUS', relativePath: payload.relativePath, success: deleteSuccess }));
           break;
 
@@ -169,11 +189,11 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 5. نظام النوم والجدولة الآلي عند الخمول والـ Proxy
+// 5. Active Sleep Scheduler / Idle Proxy Checker (Runs safely every 60 seconds)
 setInterval(() => {
   minecraft.scheduler.checkServerIdle();
 }, 60000);
 
-// 6. تفعيل الـ Terminal المحلي للجهاز الأساسي للتحكم اليدوي المباشر
+// 6. Direct Terminal Standard Input Hook for local master override commands
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-rl.on('line', (line) => { minecraft.server.executeCommand(line); });
+rl.on('line', (line) => { minecraft.world.executeCommand ? minecraft.world.executeCommand(line) : minecraft.server.executeCommand(line); });

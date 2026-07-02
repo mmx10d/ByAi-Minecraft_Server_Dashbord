@@ -1,95 +1,67 @@
+// ========================================================
+// 📟 [محرك host.js المطور - حساب نبضات المعالج الحقيقي والرام]
+// ========================================================
+
 const os = require('os');
-const fs = require('fs');
-const path = require('path');
-
-// مسار ملف الخصائص لقراءة المنفذ (Port)
-const propertiesPath = path.join(__dirname, '../server.properties');
 
 /**
- * جلب الاسم الكامل لجهاز الاستضافة ونظام التشغيل المضيف
- * @returns {string} مثال: Windows 10 Pro / Linux 5.4
+ * دالة مساعدة لأخذ لقطة تفصيلية لنبضات وقت المعالج حالياً
  */
-function getFullHostName() {
-  return `${os.type()} ${os.release()} (${os.arch()})`;
-}
+function getCpuTimeSnapshot() {
+  const cpus = os.cpus();
+  if (!cpus || cpus.length === 0) return { idle: 0, total: 0 };
 
-/**
- * جلب اسم الكمبيوتر المحلي (Host Name) المعرف على شبكة الاتصال
- * @returns {string}
- */
-function getHostName() {
-  return os.hostname();
-}
+  let totalIdle = 0;
+  let totalTick = 0;
 
-/**
- * قراءة المنفذ (Port) المحجوز لسيرفر ماين كرافت من ملف الإعدادات
- * @returns {number} المنفذ الافتراضي هو 25565
- */
-function getPortNumber() {
-  if (!fs.existsSync(propertiesPath)) {
-    return 25565; // المنفذ الافتراضي للعبة
-  }
-  try {
-    const content = fs.readFileSync(propertiesPath, 'utf8');
-    const lines = content.split('\n');
-    for (let line of lines) {
-      if (line.trim().startsWith('server-port=')) {
-        return parseInt(line.split('=')[1].trim(), 10) || 25565;
-      }
+  cpus.forEach((cpu) => {
+    for (const type in cpu.times) {
+      totalTick += cpu.times[type];
     }
-  } catch (error) {
-    console.error('[Host Manager ERROR]: فشل قراءة رقم البورت:', error);
+    totalIdle += cpu.times.idle;
+  });
+
+  return { idle: totalIdle / cpus.length, total: totalTick / cpus.length };
+}
+
+// أخذ اللقطة الأولى عند إقلاع الملف برمجياً
+let lastCpuSnapshot = getCpuTimeSnapshot();
+let currentCpuUsagePercentage = "0.00%";
+
+// جدولة داخلية كل ثانيتين لحساب فرق النبضات وتحديث النسبة بدقة مطلقة
+setInterval(() => {
+  const currentSnapshot = getCpuTimeSnapshot();
+
+  const idleDifference = currentSnapshot.idle - lastCpuSnapshot.idle;
+  const totalDifference = currentSnapshot.total - lastCpuSnapshot.total;
+
+  if (totalDifference > 0) {
+    const usage = 100 - Math.round((100 * idleDifference) / totalDifference);
+    currentCpuUsagePercentage = `${Math.max(0, usage).toFixed(2)}%`;
   }
-  return 25565;
-}
+
+  lastCpuSnapshot = currentSnapshot;
+}, 2000);
 
 /**
- * استخراج إصدار السيرفر التقريبي من خلال ملف النواة التنفيذي
- * @returns {string}
+ * جلب نسبة استهلاك المعالج الحقيقية (المصلحة تماماً من الـ 0.00%)
  */
-function getVersion() {
-  // بما أن الملف يسمى paper.jar، يمكننا الإشارة إلى النواة المستخدمة
-  return "Paper / Spigot (محددة في paper.jar)";
+function getCpuUsage() {
+  return currentCpuUsagePercentage;
 }
 
 /**
- * جلب نوع برمجيات الخادم
- * @returns {string}
- */
-function getSoftware() {
-  return "Java Edition (Node.js Managed)";
-}
-
-/**
- * حساب النسبة المئوية لاستهلاك الذاكرة العشوائية (RAM) الإجمالية للجهاز حالياً
- * @returns {string} مثال: 45.50%
+ * jلب نسبة استهلاك الذاكرة العشوائية (RAM) لجهاز الاستضافة
  */
 function getRamUsage() {
   const totalMemory = os.totalmem();
   const freeMemory = os.freemem();
   const usedMemory = totalMemory - freeMemory;
-  const usagePercentage = (usedMemory / totalMemory) * 100;
-  return `${usagePercentage.toFixed(2)}%`;
+  const percentage = (usedMemory / totalMemory) * 100;
+  return `${percentage.toFixed(2)}%`;
 }
 
-/**
- * جلب متوسط الضغط واستهلاك المعالج (CPU Load)
- * ملاحظة: os.loadavg في نظام ويندوز يعود دائماً بـ، لكنه يعمل بدقة فائقة على أنظمة لينكس وسيرفرات الاستضافة
- * @returns {string}
- */
-function getCpuUsage() {
-  const loads = os.loadavg();
-  // جلب متوسط استهلاك المعالج في آخر دقيقة
-  return `${(loads[0] * 10).toFixed(2)}%`;
-}
-
-// تصدير الدوال البرمجية
 module.exports = {
-  getFullHostName,
-  getHostName,
-  getPortNumber,
-  getVersion,
-  getSoftware,
-  getRamUsage,
-  getCpuUsage
+  getCpuUsage,
+  getRamUsage
 };
