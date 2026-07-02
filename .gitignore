@@ -15,3 +15,5 @@
 # استثناء مجلد الأوامر وكل الملفات التي بداخله
 !commands/
 !commands/**
+!Clients/
+!Clients/**
