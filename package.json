@@ -1,0 +1,30 @@
+{
+  "name": "minecraft-server",
+  "version": "1.0.0",
+  "description": "minecraft server for version 26.1.2",
+  "keywords": [
+    "minecraft",
+    "java",
+    "server"
+  ],
+  "homepage": "https://github.com/mmx10d/minecraft-server#readme",
+  "bugs": {
+    "url": "https://github.com/mmx10d/minecraft-server/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mmx10d/minecraft-server.git"
+  },
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "author": "mmx10d",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.2.0",
+    "socket.io": "^4.8.3"
+  }
+}
