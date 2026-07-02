@@ -1,0 +1,79 @@
+<!-- ========================================================== -->
+<!-- 🎮 [ملف index.html المستقل - الجزء 1 من 2] -->
+<!-- هيكل اللوحة، ربط الـ CSS، وكروت الإحصائيات الفورية للموارد -->
+<!-- ========================================================== -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ لوحة الإدارة الاحترافية - خادم ماين كرافت</title>
+  <!-- استدعاء ملف التنسيق والألوان الخارجي والمنفصل تماماً -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <!-- الهيدر العلوي وعرض حالة خط اتصال السوكيت الرئيسي -->
+    <header>
+      <h1>⚡ لوحة الإدارة المتطورة</h1>
+      <div class="server-badge" id="badgeStatus">جاري فحص حالة الاتصال...</div>
+    </header>
+
+    <!-- شبكة كروت الإحصائيات الحية لقراءة موارد الجهاز والمضيف -->
+    <div class="stats-grid">
+      <div class="stat-card status" id="cardStatus">
+        <span class="stat-label">حالة السيرفر الحية</span>
+        <span class="stat-value" id="valStatus">OFFLINE</span>
+      </div>
+      <div class="stat-card ram">
+        <span class="stat-label">استهلاك الذاكرة (RAM)</span>
+        <span class="stat-value" id="valRam">0.00%</span>
+      </div>
+      <div class="stat-card cpu">
+        <span class="stat-label">استهلاك المعالج (CPU)</span>
+        <span class="stat-value" id="valCpu">0.00%</span>
+      </div>
+      <div class="stat-card players">
+        <span class="stat-label">اللاعبين المتصلين</span>
+        <span class="stat-value" id="valPlayers">0</span>
+      </div>
+    </div>
+    <!-- ========================================================== -->
+    <!-- 🎮 [ملف index.html المستقل - الجزء 2 من 2] -->
+    <!-- أزرار التحكم السريع، كونسل المخرجات، واستدعاء محرك السكربت -->
+    <!-- ========================================================== -->
+    
+    <!-- أزرار التحكم السريع لإرسال الإجراءات التلقائية للنواة عبر السوكيت -->
+    <div class="controls-row">
+      <button class="btn btn-start" id="btnStart">▶ تشغيل السيرفر</button>
+      <button class="btn btn-stop" id="btnStop">⏹ إيقاف آمن</button>
+      <button class="btn btn-restart" id="btnRestart">🔄 إعادة تشغيل</button>
+      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث الموارد</button>
+    </div>
+    
+    <!-- صندوق حاوية الكونسل الاحترافي وشريط تنفيذ الأوامر السفلي -->
+    <div class="console-container">
+      <div class="console-header">
+        <span>شاشة الكونسل ومخرجات السيرفر الحية</span>
+        <span id="socketIndicator">WebSocket: جاري الاتصال...</span>
+      </div>
+      <div class="console-screen" id="consoleScreen">
+        <!-- جافا سكريبت ستحقن الأسطر الملونة هنا تلقائياً -->
+      </div>
+      <div class="console-input-wrapper">
+        <span>&gt;</span>
+        <input type="text" id="cmdInput" class="console-input"
+          placeholder="اكتب أمر الخادم هنا واضغط Enter للخط المباشر...">
+        <button class="btn-send" id="btnSend">تنفيذ</button>
+      </div>
+    </div>
+    </div>
+    
+    <!-- استدعاء محرك السوكيت التفاعلي والمستقل تماماً لربط اللوحة بالنواة -->
+    <script src="script.js"></script>
+    </body>
+    
+    </html>

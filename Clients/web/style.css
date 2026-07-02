@@ -1,0 +1,292 @@
+/* ==========================================================
+   🎮 [ملف التنسيق البصري والأنماط - الجزء 1 من 2]
+   المتغيرات العامة، هيكل الحاوية، وشبكة كروت الموارد الحية
+   ========================================================== */
+
+:root {
+  --bg-primary: #0a0c10;
+  --bg-secondary: #131722;
+  --bg-darker: #06070a;
+  --accent-green: #00e676;
+  --accent-red: #ff3d00;
+  --accent-blue: #00b0ff;
+  --text-main: #f5f6f9;
+  --text-muted: #848d9a;
+  --border-color: #222938;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-main);
+  padding: 30px;
+}
+
+/* الحاوية الأساسية للوحة التحكم */
+.wrapper {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+/* الهيدر وشريط العنوان */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.server-badge {
+  background: rgba(0, 176, 255, 0.05);
+  color: var(--accent-blue);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: bold;
+  border: 1px solid rgba(0, 176, 255, 0.15);
+}
+
+/* شبكة كروت الإحصائيات الفورية */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s ease;
+}
+
+/* الخطوط النيونية الجانبية لكل كرت */
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-blue);
+}
+
+.stat-card.ram::before {
+  background: var(--accent-blue);
+}
+
+.stat-card.cpu::before {
+  background: var(--accent-green);
+}
+
+.stat-card.status::before {
+  background: #555;
+}
+
+.stat-card.players::before {
+  background: #9c27b0;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+}
+/* ==========================================================
+   🎮 [ملف التنسيق البصري والأنماط - الجزء 2 من 2]
+   أزرار التحكم، حاوية الكونسل، تلوين الأسطر، وحقل الأوامر
+   ========================================================== */
+
+/* أزرار التحكم السريع */
+.controls-row {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  color: #fff;
+}
+
+.btn-start {
+  background: var(--accent-green);
+  color: #000;
+}
+
+.btn-start:hover {
+  background: #00c862;
+  box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+}
+
+.btn-stop {
+  background: var(--accent-red);
+}
+
+.btn-stop:hover {
+  background: #e03500;
+  box-shadow: 0 0 15px rgba(255, 61, 0, 0.3);
+}
+
+.btn-restart {
+  background: #333a4d;
+  border: 1px solid var(--border-color);
+}
+
+.btn-restart:hover {
+  background: #414a61;
+}
+
+.btn-refresh {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  margin-right: auto;
+}
+
+.btn-refresh:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* حاوية الكونسل الاحترافية */
+.console-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.console-header {
+  background: var(--bg-darker);
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.console-screen {
+  background: var(--bg-darker);
+  height: 450px;
+  padding: 20px;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #cfd8dc;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  direction: ltr;
+}
+
+/* تنسيق أسطر سجلات الكونسل الحية وتلوينها الذكي */
+.log-line {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.01);
+  padding-bottom: 2px;
+  white-space: pre-wrap;
+}
+
+.log-error {
+  color: #ff5252;
+  background: rgba(255, 82, 82, 0.03);
+  border-radius: 4px;
+  padding-left: 5px;
+}
+
+.log-system {
+  color: #00b0ff;
+  font-style: italic;
+}
+
+.log-info {
+  color: #00e676;
+}
+
+/* شريط إدخال الأوامر السفلي */
+.console-input-wrapper {
+  display: flex;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  padding: 10px;
+}
+
+.console-input-wrapper span {
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  color: var(--text-muted);
+  font-family: monospace;
+  font-weight: bold;
+}
+
+.console-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  padding: 12px;
+  color: #fff;
+  font-family: monospace;
+  font-size: 14px;
+  outline: none;
+}
+
+.btn-send {
+  background: var(--accent-blue);
+  color: #000;
+  padding: 0 25px;
+  border-radius: 6px;
+  font-weight: bold;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.btn-send:hover {
+  background: #0091ea;
+}
