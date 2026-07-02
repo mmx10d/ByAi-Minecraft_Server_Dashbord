@@ -1,39 +1,45 @@
 // ========================================================
-// 👾 [بوت ديسكورد المحترف المحدث - الجزء 1 من 2]
-// تهيئة المكتبات، الاتصال بالسوكيت، وبناء الأزرار العامة والقوائم
+// 👾 [بوت ديسكورد المصلح والمفصول - الجزء 1 من 2]
+// تهيئة الصلاحيات، الاتصال بالسوكيت، وبث السجلات لروم اللوجز المنفصلة
 // ========================================================
 
 const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder, EmbedBuilder } = require('discord.js');
 const WebSocket = require('ws');
 require('dotenv').config({ path: '../.env' });
 
-// تأسيس كائن بوت ديسكورد مع تفعيل الصلاحيات اللازمة لقراءة الشات
+// إعداد صلاحيات الإقلاع الشاملة والمتوافقة مع بوابات ديسكورد الأمنية المحدثة
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMembers
+  ]
 });
 
-// الاتصال الفوري بخادم السوكيت المركزي للنواة الخلفية للمشروع
+// الاتصال الفوري بخادم السوكيت المركزي للنواة الخلفية للمشروع (ws://localhost:8080)
 const ws = new WebSocket(process.env.SOCKET_URL);
 
-// متغير الذاكرة المؤقتة لحفظ اسم اللاعب المستهدف عند تطبيق إجراءات لوحة ديسكورد
+// متغير الذاكرة المؤقتة لحفظ اسم اللاعب المستهدف عند تطبيق عقوبات اللوحة
 let selectedPlayerContext = "";
 
 client.once('ready', () => {
-  console.log(`[Discord Bot]: يعمل بنجاح ومسجل باسم ${client.user.tag}`);
+  console.log(`[Discord Bot]: تم فصل الرومات وتحديث النمط! البوت يعمل باسم ${client.user.tag}`);
 
-  // استقبال الـ Logs المتدفقة حياً وبثها داخل روم الديسكورد المحددة في الـ .env
+  // استقبال الـ Logs المتدفقة حياً وبثها حصرياً داخل روم السجلات المنفصلة (LOGS CHANNEL)
   ws.on('message', (message) => {
     try {
       const response = JSON.parse(message.toString());
       if (response.type === 'LOG') {
-        const channel = client.channels.cache.get(process.env.DISCORD_CHANNEL_ID);
-        if (channel) {
-          // إرسال الـ Log في كتلة برمجية ليكون منسقاً وقابلاً للقراءة
-          channel.send(`\`\`\`ansi\n${response.data}\n\`\`\``).catch(() => { });
+        // جلب آيدي روم اللوجز المنفصلة حصرياً من الـ .env
+        const logChannel = client.channels.cache.get(process.env.DISCORD_LOGS_CHANNEL_ID);
+        if (logChannel) {
+          // إرسال الـ Log في كتلة برمجية منسقة لعدم تشويه شات اللوحة والتحكم
+          logChannel.send(`\`\`\`ansi\n${response.data}\n\`\`\``).catch(() => { });
         }
       }
     } catch (e) {
-      // تجاهل الحزم الأخرى كالموارد أثناء تدفق السجلات
+      // تجاهل حزم الموارد أثناء تدفق السجلات الحية
     }
   });
 });
@@ -57,25 +63,26 @@ function createManagementButtons() {
   );
 }
 // ========================================================
-// 👾 [بوت ديسكورد المحترف المحدث - الجزء 2 من 2]
-// معالج تفاعلات الأزرار والقوائم المنسدلة (Interaction Handler)
+// 👾 [بوت ديسكورد المصلح والمفصول - الجزء 2 من 2]
+// معالج التفاعلات والأوامر المنفصلة حصرياً داخل روم الأوامر واللوحة
 // ========================================================
 
-// الاستماع لكتابة أمر تشغيل اللوحة يدوياً في الشات المخصص
+// الاستماع لكتابة أمر تشغيل اللوحة يدوياً في روم الأوامر المخصصة حصرياً
 client.on('messageCreate', async (message) => {
-  if (message.author.bot || message.channel.id !== process.env.DISCORD_CHANNEL_ID) return;
+  // 💡 حماية صارمة: منع البوتات والإنصات الحصري فقط لروم الأوامر المحددة في الـ .env
+  if (message.author.bot || message.channel.id !== process.env.DISCORD_COMMANDS_CHANNEL_ID) return;
 
   // عند كتابة كلمة "لوحة" أو "!panel" تظهر اللوحة الرسومية المتطورة
   if (message.content === '!panel' || message.content === 'لوحة') {
     const embed = new EmbedBuilder()
       .setTitle('⚡ لوحة تحكم ماين كرافت السحابية الاحترافية')
-      .setDescription('مرحباً بك في غرفة عمليات ديسكورد المتصلة بالنواة الخلفية حياً.\nاختر أحد الأوامر أو أقسام إدارة اللاعبين من الأزرار التفاعلية أدناه:')
+      .setDescription('مرحباً بك في غرفة عمليات ديسكورد المنفصلة والمربوطة بالنواة الخلفية حياً.\nاختر أحد الأوامر أو أقسام إدارة اللاعبين من الأزرار أدناه:')
       .setColor('#00b0ff')
       .setTimestamp();
 
     message.channel.send({ embeds: [embed], components: [createMainButtons(), createManagementButtons()] });
   } else {
-    // تمرير أي نص آخر عادي كأمر كونسل مباشر (للحالات السريعة)
+    // تمرير أي نص آخر عادي كأمر كونسل مباشر (للحالات السريعة) من روم الأوامر
     ws.send(JSON.stringify({
       action: 'MINECRAFT_COMMAND',
       payload: { command: message.content.trim() }
@@ -83,27 +90,27 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// معالجة نقرات الأزرار والقوائم المنسدلة (Interaction Handler)
+// معالجة نقرات الأزرار والقوائم المنسدلة (Interaction Handler) لروم التحكم
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isButton() && !interaction.isStringSelectMenu()) return;
 
-  // تمديد الوقت لمعالجة الطلبات القادمة من السوكيت بأمان
-  await interaction.deferUpdate().catch(() => { });
+  // إبلاغ ديسكورد فوراً بأن البوت استلم الأمر وجاري المعالجة لحل مشكلة التأخير
+  await interaction.deferReply({ ephemeral: true }).catch(() => { });
 
   const customId = interaction.customId;
 
   // 1. معالجة أزرار القدرة العامة (Power Component)
   if (customId === 'DISC_START') {
     ws.send(JSON.stringify({ action: 'START_SERVER' }));
-    return interaction.channel.send('🚀 *[ديسكورد]:* جاري بدء تشغيل وإيقاظ السيرفر وتوليد عملية الجافا بالخلفية...');
+    return interaction.editReply('🚀 *[ديسكورد]:* جاري بدء تشغيل وإيقاظ السيرفر وتوليد عملية الجافا بالخلفية...');
   }
   if (customId === 'DISC_STOP') {
     ws.send(JSON.stringify({ action: 'STOP_SERVER' }));
-    return interaction.channel.send('🛑 *[ديسكورد]:* تم إرسال أمر الإيقاف الآمن لحفظ ملفات الخريطة وعوالم اللاعبين.');
+    return interaction.editReply('🛑 *[ديسكورد]:* تم إرسال أمر الإيقاف الآمن لحفظ ملفات الخريطة وعوالم اللاعبين.');
   }
   if (customId === 'DISC_RESTART') {
     ws.send(JSON.stringify({ action: 'RESTART_SERVER' }));
-    return interaction.channel.send('🔄 *[ديسكورد]:* تم تفعيل إعادة التشغيل الذكية لإنعاش المنفذ والملفات.');
+    return interaction.editReply('🔄 *[ديسكورد]:* تم تفعيل إعادة التشغيل الذكية لإنعاش المنفذ والملفات.');
   }
 
   // 2. زر فحص الموارد الحية (Resource Monitor)
@@ -126,14 +133,14 @@ client.on('interactionCreate', async (interaction) => {
             { name: '👥 المتصلين:', value: `\`${playersCount}\` لاعب`, inline: true }
           )
           .setColor('#00e676');
-        interaction.channel.send({ embeds: [statsEmbed] });
+        interaction.editReply({ embeds: [statsEmbed] });
       }
     };
     ws.on('message', handleStats);
     return;
   }
 
-  // 3. محرك جافا سكريبت الذكي لتحويل ملفات الـ JSON للاعبين إلى قوائم اختيار منسدلة (Menus)
+  // 3. تحويل ملفات الـ JSON للاعبين بالأسماء الصافية إلى قوائم اختيار منسدلة (Menus)
   if (customId === 'DISC_MENU_PLAYERS' || customId === 'DISC_MENU_BANLIST' || customId === 'DISC_MENU_OPS') {
     ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
@@ -147,6 +154,7 @@ client.on('interactionCreate', async (interaction) => {
         let menuActionId = "";
 
         if (customId === 'DISC_MENU_PLAYERS') {
+          // سحب الحسابات الصافية المستخرجة عبر الـ RegEx الحقيقي
           targetList = response.data.playersOnline || [];
           selectPlaceholder = "👥 اختر لاعباً متصلاً لتطبيق العقوبة عليه...";
           menuActionId = "SELECT_PLAYER_CURE";
@@ -161,35 +169,37 @@ client.on('interactionCreate', async (interaction) => {
         }
 
         if (targetList.length === 0) {
-          return interaction.channel.send('❌ *[نظام الإدارة]:* القائمة المطلوبة فارغة حالياً في ملفات السيرفر.');
+          return interaction.editReply('❌ *[نظام الإدارة]:* القائمة المطلوبة فارغة حالياً في ملفات السيرفر حياً.');
         }
 
-        // صياغة خيارات القائمة المنسدلة من مصفوفة الأسماء الحقيقية
+        // صياغة خيارات القائمة المنسدلة النظيفة
         const options = targetList.slice(0, 25).map(name => ({ label: `👤 الحساب: ${name}`, value: name }));
         const rowMenu = new ActionRowBuilder().addComponents(
           new StringSelectMenuBuilder().setCustomId(menuActionId).setPlaceholder(selectPlaceholder).addOptions(options)
         );
-        interaction.channel.send({ components: [rowMenu] });
+
+        interaction.channel.send({ content: selectPlaceholder, components: [rowMenu] });
+        interaction.editReply('🔄 تم توليد القائمة المنسدلة في روم الأوامر بنجاح.');
       }
     };
     ws.on('message', handleMenuData);
     return;
   }
 
-  // 4. تنفيذ العقوبات الفورية بناءً على خيار القائمة المنسدلة المكبوسة
+  // 4. تنفيذ الأوامر بالأسماء الصافية تماماً وبدون أرقام مشوهة
   if (customId === 'SELECT_PLAYER_PARDON') {
     const player = interaction.values[0];
     ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `pardon ${player}` } }));
-    return interaction.channel.send(`✅ *[العقوبات]:* تم إلغاء حظر اللاعب \`${player}\` بنجاح وعاد للوايت لست.`);
+    return interaction.editReply(`✅ *[العقوبات]:* تم إلغاء حظر اللاعب \`${player}\` بنجاح ويمكنه الدخول.`);
   }
 
   if (customId === 'SELECT_PLAYER_DEOP') {
     const player = interaction.values[0];
     ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `deop ${player}` } }));
-    return interaction.channel.send(`🛡️ *[الرتب]:* تم تجريد اللاعب \`${player}\` من صلاحيات الأدمن والكونسل.`);
+    return interaction.editReply(`🛡️ *[الرتب]:* تم تجريد اللاعب \`${player}\` من صلاحيات الأدمن والمسؤول بنجاح.`);
   }
 
-  // عند اختيار لاعب أونلاين، نفتح له أزرار الإجراءات الفردية الفورية
+  // فتح أزرار الإجراءات الفردية الفورية للاعب الأونلاين المختار بدقة وصافياً
   if (customId === 'SELECT_PLAYER_CURE') {
     selectedPlayerContext = interaction.values[0];
 
@@ -198,22 +208,22 @@ client.on('interactionCreate', async (interaction) => {
       new ButtonBuilder().setCustomId('DISC_BAN').setLabel(`🚫 بن لـ ${selectedPlayerContext}`).setStyle(ButtonStyle.Danger),
       new ButtonBuilder().setCustomId('DISC_OP').setLabel(`👑 رتبة OP لـ ${selectedPlayerContext}`).setStyle(ButtonStyle.Success)
     );
-    interaction.channel.send({ content: `🛠️ *خيارات التحكم المباشر باللاعب:* \`${selectedPlayerContext}\``, components: [cureRow] });
-    return;
+    interaction.channel.send({ content: `🛠️ *خيارات التحكم المباشر باللاعب الصافي:* \`${selectedPlayerContext}\``, components: [cureRow] });
+    return interaction.editReply('🎯 تم فتح خيارات التحكم الخاصة باللاعب المختار.');
   }
 
-  // 5. ضخ أوامر العقوبات الفردية للسيرفر عبر السوكيت
+  // 5. ضخ أوامر العقوبات بالاسم الصافي دون تكرار أو التصاق أرقام الـ Entity ID
   if (customId === 'DISC_KICK' && selectedPlayerContext) {
-    ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `kick ${selectedPlayerContext} طرد سريع عبر ديسكورد` } }));
-    return interaction.channel.send(`✅ تم طرد اللاعب \`${selectedPlayerContext}\` خارج خادم اللعبة.`);
+    ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `kick ${selectedPlayerContext} طرد سريع ومؤتمت عبر ديسكورد` } }));
+    return interaction.editReply(`✅ تم طرد اللاعب \`${selectedPlayerContext}\` خارج السيرفر بنجاح.`);
   }
   if (customId === 'DISC_BAN' && selectedPlayerContext) {
-    ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `ban ${selectedPlayerContext} حظر صارم عبر ديسكورد` } }));
-    return interaction.channel.send(`🚨 تم حظر اللاعب \`${selectedPlayerContext}\` نهائياً وإدراجه في البان ليست.`);
+    ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `ban ${selectedPlayerContext} حظر صارم ومؤتمت عبر ديسكورد` } }));
+    return interaction.editReply(`🚨 تم حظر اللاعب \`${selectedPlayerContext}\` نهائياً وإدراجه في ملف الحظر بالقرص.`);
   }
   if (customId === 'DISC_OP' && selectedPlayerContext) {
     ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `op ${selectedPlayerContext}` } }));
-    return interaction.channel.send(`👑 تم ترفيع اللاعب \`${selectedPlayerContext}\` إلى مرتبة مسؤول الكونسل.`);
+    return interaction.editReply(`👑 تم ترفيع اللاعب \`${selectedPlayerContext}\` إلى مرتبة مسؤول الكونسل الكاملة.`);
   }
 });
 
