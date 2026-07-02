@@ -1,12 +1,12 @@
 /* ==========================================================
-   📡 [محرك الويب التفاعلي المصلح - الجزء 1 من 5]
-   تأسيس خط اتصال السوكيت، ومحرك التحديث الحي السلس الصافي
+   📡 [Hardened Progress Tracking Engine - Part 1 of 5]
+   WebSocket Configuration, DOM Captures & Core Message Routers
    ========================================================== */
 
-// 1. فتح خط اتصال السوكيت الفوري والمستقل بالخادم المركزي للـ Backend (البورت 8080)
+// 1. Establish absolute standalone real-time connection link to socket backend (Port 8080)
 const ws = new WebSocket('ws://localhost:8080');
 
-// 2. جلب وتأمين عناصر واجهة الويب من الـ DOM
+// 2. Safely capture and hook DOM interface elements for execution loops
 const consoleScreen = document.getElementById('consoleScreen');
 const socketIndicator = document.getElementById('socketIndicator');
 const badgeStatus = document.getElementById('badgeStatus');
@@ -19,30 +19,36 @@ const valPlayers = document.getElementById('valPlayers');
 const countOnline = document.getElementById('countOnline');
 const cmdInput = document.getElementById('cmdInput');
 
-// حاويات جداول اللاعبين الخمسة حياً
+// Upgraded Generation Progress UI elements
+const preparationStatusBadge = document.getElementById('preparationStatusBadge');
+const progressOuterWrapper = document.getElementById('progressOuterWrapper');
+const progressInnerBar = document.getElementById('progressInnerBar');
+const progressPercentText = document.getElementById('progressPercentText');
+
+// Connection table mount elements
 const listOnline = document.getElementById('listOnline');
 const listOps = document.getElementById('listOps');
 const listWhitelist = document.getElementById('listWhitelist');
 const listBanned = document.getElementById('listBanned');
 const listBannedIps = document.getElementById('listBannedIps');
 
-// متغيرات ومستندات مدير ملفات الساند بوكس المعزول
+// Isolated Sandbox exploration parameters
 const fileBrowserList = document.getElementById('fileBrowserList');
 const currentPathDisplay = document.getElementById('currentPathDisplay');
 let currentRelativePath = "";
 let isPluginAreaActive = false;
 
-// متغير عالمي لحفظ مصفوفة أسماء اللاعبين أونلاين منعاً لوميض الواجهة غير المبرر
+// Local caching arrays to guarantee fluid update actions with zero page flicker
 let cachedOnlinePlayersJson = "";
 
-// مستمع الأحداث عند نجاح فتح خط الاتصال بالسوكيت المركزي
+// WebSocket lifecycle events
 ws.onopen = () => {
   socketIndicator.innerText = 'WebSocket: متصل 🟢';
   socketIndicator.style.color = '#00e676';
   badgeStatus.innerText = 'متصل بخادم السوكيت المركزي بنجاح';
   badgeStatus.style.color = '#00b0ff';
 
-  // طلب حزمة البيانات الشاملة فور الاتصال لتهيئة الواجهة
+  // Immediately fetch host diagnostics & configurations upon synchronization
   sendAction('GET_HOST_STATS');
   browseFolder('');
 };
@@ -57,15 +63,17 @@ ws.onclose = () => {
   cardStatus.style.borderColor = '#222938';
 };
 
-// معالجة وتحليل حزم الـ JSON المتقدمة الواردة حياً من ملف index.js الرئيسي
+// Central incoming message hub decoding JSON payloads from index.js
 ws.onmessage = (event) => {
   try {
     const packet = JSON.parse(event.data);
 
     if (packet.type === 'LOG') {
       appendLogLine(packet.data);
+      // 🆕 Seamlessly intercept log streams to animate the progress loader
+      interceptLogForWorldGeneration(packet.data);
     } else if (packet.type === 'HOST_STATS') {
-      // تحديث كروت الموارد الأربعة العلوية حياً بنعومة مطلقة (سلس ودون لمس بقية الصفحة)
+      // Update global hardware computational cards smoothly
       valStatus.innerText = packet.data.status;
       valRam.innerText = packet.data.ram;
       valCpu.innerText = packet.data.cpu;
@@ -80,20 +88,20 @@ ws.onmessage = (event) => {
         cardStatus.style.borderColor = 'rgba(255, 61, 0, 0.3)';
       }
 
-      // الفحص الحي الذكي للأسماء: يتم تحديث جداول اللاعبين فقط إذا تغيرت محتويات الحزمة فعلياً من السيرفر
+      // Only redraw active players if array elements actually change on disk
       const currentPlayersJson = JSON.stringify(packet.data.playersOnline);
       if (currentPlayersJson !== cachedOnlinePlayersJson) {
         cachedOnlinePlayersJson = currentPlayersJson;
         renderOnlinePlayersList(packet.data.playersOnline || []);
       }
 
-      // تحديث القوائم الثابتة بسلاسة
+      // Repopulate structural list nodes without disrupting view focal points
       renderSimpleList(listOps, packet.data.opsList || [], 'deop', '🛡️ سحب OP', 'mini-kick');
       renderSimpleList(listWhitelist, packet.data.whitelistList || [], 'whitelist remove', '❌ إزالة', 'mini-kick');
       renderSimpleList(listBanned, packet.data.bannedPlayersList || [], 'pardon', '🟢 فك حظر', 'mini-unban');
       renderSimpleList(listBannedIps, packet.data.bannedIpsList || [], 'pardon-ip', '🟢 فك آي بي', 'mini-unban');
 
-      // مزامنة وتحديث قيم لوحة خيارات وإعدادات السيرفر
+      // Map standard property checkboxes
       syncAternosSettingsPanel(packet.data.serverProperties || {});
 
     } else if (packet.type === 'PLAYER_ADVANCED_DATA') {
@@ -110,6 +118,7 @@ ws.onmessage = (event) => {
   }
 };
 
+// Synchronize properties while skipping unneeded updates
 function syncAternosSettingsPanel(props) {
   if (props['gamemode']) document.getElementById('setGamemode').value = props['gamemode'];
   if (props['difficulty']) document.getElementById('setDifficulty').value = props['difficulty'];
@@ -133,11 +142,62 @@ function syncAternosSettingsPanel(props) {
   }
 }
 /* ==========================================================
-   📡 [محرك الويب التفاعلي المصلح - الجزء 2 من 5]
-   بناء جداول اللاعبين، ونافذة تفاصيل وموارد اللاعب المدمجة
+   📡 [محرك الويب التفاعلي المصلح - الجزء 2 من 6]
+   محرك رصد مخرجات الكونسل الحية وتحريك شريط تقدم توليد الخريطة
    ========================================================== */
 
-// 3. دالة بناء جدول اللاعبين المتصلين وتوليد زر كشف تفاصيل الحساب والموارد المدمجة
+// 🆕 محرك الـ RegEx الذكي لالتقاط أسطر توليد عوالم ماين كرافت وتحريك شريط التقدم حياً
+function interceptLogForWorldGeneration(logLine) {
+  // 1. التقاط بدء مرحلة توليد عوالم ماين كرافت (Overworld, Nether, End)
+  if (logLine.includes('Preparing level') || logLine.includes('Selecting spawn point')) {
+    preparationStatusBadge.innerText = 'الحالة الإجرائية: PREPARING... ⏳';
+    preparationStatusBadge.style.color = 'var(--accent-gold)';
+    preparationStatusBadge.style.background = 'rgba(255, 215, 0, 0.05)';
+
+    // إظهار شريط التقدم الرسومي والنسبة المئوية النيون
+    progressOuterWrapper.style.display = 'block';
+    progressPercentText.style.display = 'block';
+    return;
+  }
+
+  // 2. التقاط أسطر تقدم الـ Chunks بالـ RegEx (مثال: Preparing spawn area: 45%)
+  if (logLine.includes('Preparing spawn area:')) {
+    const percentMatch = logLine.match(/Preparing spawn area:\s*([0-9]+)%/);
+    if (percentMatch && percentMatch[1]) {
+      const percentageValue = parseInt(percentMatch[1], 10);
+
+      // تحريك شريط التقدم الداخلي والنسبة المئوية بنعومة فلكية
+      progressInnerBar.style.width = `${percentageValue}%`;
+      progressPercentText.innerText = `${percentageValue}%`;
+
+      preparationStatusBadge.innerText = `الحالة الإجرائية: PREPARING (${percentageValue}%) 🏗️`;
+      preparationStatusBadge.style.color = 'var(--accent-blue)';
+    }
+    return;
+  }
+
+  // 3. التقاط لحظة الاكتمال التام للتحميل والإقلاع المستقر بنسبة 100%
+  if (logLine.includes('Done (') && logLine.includes('For help, type "help"')) {
+    progressInnerBar.style.width = '100%';
+    progressPercentText.innerText = '100%';
+
+    preparationStatusBadge.innerText = 'الحالة الإجرائية: ONLINE ✅ يعمل بسلام';
+    preparationStatusBadge.style.color = 'var(--accent-green)';
+    preparationStatusBadge.style.background = 'rgba(0, 230, 118, 0.05)';
+
+    // إخفاء الـ Progress Bar بعد 4 ثوانٍ من استقرار السيرفر لتنظيف مظهر اللوحة العلوية
+    setTimeout(() => {
+      progressOuterWrapper.style.display = 'none';
+      progressPercentText.style.display = 'none';
+    }, 4000);
+  }
+}
+/* ==========================================================
+   📡 [Hardened Progress Tracking Engine - Part 3 of 6]
+   Dynamic Live Player Table Renderers & Administrative Arrays
+   ========================================================== */
+
+// 4. Build dynamic active player list container with deep profiling triggers
 function renderOnlinePlayersList(playersArray) {
   listOnline.innerHTML = '';
   if (playersArray.length === 0) {
@@ -160,7 +220,7 @@ function renderOnlinePlayersList(playersArray) {
   });
 }
 
-// 4. دالة بناء القوائم الإدارية الأخرى حياً بسلاسة
+// 5. Secondary administrative data sync renderer (Ops, Whitelist, Bans)
 function renderSimpleList(containerElement, dataArray, minecraftCommandPrefix, buttonText, buttonClass) {
   containerElement.innerHTML = '';
   if (dataArray.length === 0) {
@@ -179,38 +239,38 @@ function renderSimpleList(containerElement, dataArray, minecraftCommandPrefix, b
     containerElement.appendChild(row);
   });
 }
+/* ==========================================================
+   📡 [محرك الويب التفاعلي المصلح - الجزء 4 من 6]
+   تفاصيل وموارد اللاعب المدمجة، وتبديل مجلدات الساند بوكس
+   ========================================================== */
 
-// 5. محرك كشف وعرض تفاصيل وموارد اللاعب المدمجة (Player Details & Inventory View)
+// 6. محرك كشف وعرض تفاصيل وموارد اللاعب المدمجة (Player Details & Inventory View)
 function requestAdvancedPlayerData(playerName) {
   ws.send(JSON.stringify({ action: 'GET_PLAYER_ADVANCED_DATA', payload: { playerName } }));
 }
 
 function displayAdvancedPlayerDetails(data) {
-  // الموارد التي بحوزته أولاً في الأعلى
+  // الموارد والإحصائيات الحية التي بحوزته أولاً في الأعلى
   document.getElementById('advPlayerName').innerText = data.name;
   document.getElementById('invPlayerKills').innerText = data.playerKills;
   document.getElementById('invMobKills').innerText = data.mobKills;
   document.getElementById('invJumps').innerText = data.jumps;
   document.getElementById('invAdvancements').innerText = data.advancementsCount;
 
-  // معلومات الحساب والاتصال بالخادم بالأسفل
+  // معلومات الحساب والاتصال بالخادم بالأسفل لبناء واجهة موحدة
   document.getElementById('invUuid').innerText = data.uuid;
   document.getElementById('invPlayTime').innerText = data.playTime;
   document.getElementById('invDeaths').innerText = data.deaths;
 
-  // إظهار اللوحة المنسقة للمستخدم بسلاسة دون إعادة تحميل الصفحة
+  // إظهار اللوحة المنسقة للمستخدم
   document.getElementById('playerAdvancedView').style.display = 'block';
 }
 
 function closePlayerInventory() {
   document.getElementById('playerAdvancedView').style.display = 'none';
 }
-/* ==========================================================
-   📡 [محرك الويب التفاعلي المصلح - الجزء 3 من 5]
-   متصفح ملفات الساند بوكس المعزول، تبديل مجلدات اللوحة، وحقن عناصر القرص
-   ========================================================== */
 
-// 6. محرك تبديل واجهات الملفات المعزولة (العالم world أو الإضافات plugins حصراً)
+// 7. محرك تبديل واجهات الملفات المعزولة (العالم world أو الإضافات plugins حصراً)
 function switchFileArea(toPluginArea) {
   isPluginAreaActive = toPluginArea;
   const tabWorld = document.getElementById('tabWorldBtn');
@@ -232,11 +292,15 @@ function switchFileArea(toPluginArea) {
     tabPlugins.style.border = '1px solid var(--border-color)';
     currentPathDisp.innerText = "/world";
   }
-  // تصفح المجلد الرئيسي للمنطقة المحددة فور التبديل
+  // تصفح المجلد الرئيسي للمنطقة المحددة فور التبديل لضمان الأمان
   browseFolder('');
 }
+/* ==========================================================
+   📡 [Hardened Progress Tracking Engine - Part 5 of 6]
+   Sandboxed Directory Traversal Loops & Cyber Modal Prompts
+   ========================================================== */
 
-// 7. محرك تصفح المجلدات المعزول حديدياً عبر السوكيت
+// 8. Dispatch filesystem crawl requests over the WebSocket channel
 function browseFolder(pathStr) {
   currentRelativePath = pathStr;
   const prefix = isPluginAreaActive ? "/plugins" : "/world";
@@ -255,7 +319,7 @@ function goBackFolder() {
   browseFolder(parts.join('/'));
 }
 
-// حقن وتوليد عناصر الملفات والمجلدات الحية القادمة من السيرفر
+// 9. Populating database nodes with utility functions (Download, Delete, and Rename)
 function renderDirectoryFiles(currentPath, itemsArray) {
   fileBrowserList.innerHTML = '';
   if (itemsArray.length === 0) {
@@ -270,7 +334,6 @@ function renderDirectoryFiles(currentPath, itemsArray) {
     const icon = item.isDirectory ? "📁" : "📄";
     const clickAction = item.isDirectory ? `browseFolder('${item.relativePath}')` : `requestReadFileContent('${item.relativePath}')`;
 
-    // بناء عناصر الميتا والأزرار التفاعلية (تحميل، حذف، وإعادة تسمية) لكل ملف ومجلد
     let actionButtons = `<button class="action-mini mini-unban" onclick="triggerRenameModal('${item.relativePath}')">📝 اسم</button>`;
     if (!item.isDirectory) {
       actionButtons += ` <button class="action-mini mini-op" onclick="downloadSingleServerFile('${item.relativePath}')">📥 تحميل</button>`;
@@ -289,14 +352,10 @@ function renderDirectoryFiles(currentPath, itemsArray) {
     fileBrowserList.appendChild(row);
   });
 }
-/* ==========================================================
-   📡 [محرك الويب التفاعلي المصلح - الجزء 4 من 5]
-   صناديق التأكيد المخصصة، محرر النصوص، والتحميل والرفع الباينري
-   ========================================================== */
 
+// 10. Cyber-Industrial prompt window overlay event loops (No alert popups)
 let activeModalCallback = null;
 
-// 8. محرك تشغيل وإدارة صناديق التأكيد والمدخلات المخصصة (Custom HTML Modals)
 function showCustomModal(title, bodyText, showInput = false, placeholder = '', callback) {
   document.getElementById('customModalTitle').innerText = title;
   document.getElementById('customModalBody').innerText = bodyText;
@@ -319,7 +378,6 @@ function closeCustomModal() {
   activeModalCallback = null;
 }
 
-// تنفيذ الأكشن المربوط عند ضغط زر تأكيد من صندوق المودال المخصص
 document.getElementById('customModalConfirmBtn').onclick = function () {
   if (activeModalCallback) {
     const inputVal = document.getElementById('customModalInput').value.trim();
@@ -327,8 +385,12 @@ document.getElementById('customModalConfirmBtn').onclick = function () {
   }
   closeCustomModal();
 };
+/* ==========================================================
+   📡 [محرك الويب التفاعلي المصلح - الجزء 6 من 6]
+   إدارة الصناديق المخصصة، محرر النصوص، ونظام الباك أب النيون والكونسل
+   ========================================================== */
 
-// 9. تشغيل صناديق التأكيد المخصصة لعمليات الحذف والاسم وإعادة تصفير العالم
+// 11. تشغيل صناديق التأكيد المخصصة لعمليات الحذف والاسم وإعادة تصفير العالم بالريستارت التلقائي
 function triggerDeleteFileConfirm(pathStr) {
   showCustomModal('🗑️ تأكيد الحذف الصارم', `هل أنت متأكد تماماً من تدمير وحذف: ${pathStr}؟ لا يمكن التراجع!`, false, '', function () {
     ws.send(JSON.stringify({ action: 'DELETE_FILE_OR_FOLDER', payload: { relativePath: pathStr, isPluginArea: isPluginAreaActive } }));
@@ -345,12 +407,12 @@ function triggerRenameModal(oldPath) {
 }
 
 function triggerWorldRecreationConfirm() {
-  showCustomModal('🗺️ تصفير وإعادة إنشاء العالم بالكامل', '🚨 تحذير: سيتم مسح مجلد العالم "world" تماماً من الهارد ديسك وتوليد عالم جديد عند الإقلاع القادم! هل تود الاستمرار؟', false, '', function () {
+  showCustomModal('🗺️ تصفير وإعادة إنشاء العالم بالكامل', '🚨 تحذير: سيتم مسح مجلد العالم تماماً وإعادة تشغيل السيرفر تلقائياً فوراً لتوليد عالم جديد بكر! هل تود الاستمرار؟', false, '', function () {
     ws.send(JSON.stringify({ action: 'RECREATE_FRESH_WORLD' }));
   });
 }
 
-// 10. محرر النصوص السحابي، التحميل المنفرد الباينري، ورفع ملفات العالم والبلقنز
+// 12. محرر النصوص السحابي، التحميل المنفرد الباينري، ورفع ملفات العالم والبلقنز
 function requestReadFileContent(pathStr) {
   ws.send(JSON.stringify({ action: 'READ_FILE_TEXT_CONTENT', payload: { relativePath: pathStr, isPluginArea: isPluginAreaActive } }));
 }
@@ -389,12 +451,8 @@ function handleFileUpload(inputElement) {
   };
   reader.readAsDataURL(file);
 }
-/* ==========================================================
-   📡 [محرك الويب التفاعلي المصلح - الجزء 5 من 5]
-   إرسال الخصائص الصارم، نظام جاهزية تحميل الباك أب النيون، والكونسل
-   ========================================================== */
 
-// 11. إدارة ومزامنة خصائص السيرفر والتحميل التلقائي لملفات الباينري
+// 13. إدارة ومزامنة خصائص السيرفر والتحميل التلقائي لملفات الباينري
 function sendServerProperty(key, value) {
   ws.send(JSON.stringify({ action: 'UPDATE_SERVER_PROPERTY', payload: { key, value } }));
 }
@@ -418,7 +476,7 @@ function saveMaxPlayersSetting() {
   showCustomModal('⚙️ تم حفظ الإعداد', 'تم حفظ الحد الأقصى للاعبين بنجاح، يتطلب ريستارت لتطبيقه.', false, '', null);
 }
 
-// دالة جديدة: استقبال ملفات الباك أب والملفات الباينري وبناء جاهزية التحميل الفوري النيون
+// دالة جديدة ومعدلة: استقبال ملفات الباك أب والملفات الباينري وبناء جاهزية التحميل الفوري النيون
 function handleZipOrFileDownloadReady(fileName, base64String) {
   const binaryString = atob(base64String);
   const len = binaryString.length;
@@ -432,8 +490,8 @@ function handleZipOrFileDownloadReady(fileName, base64String) {
   backupBtn.disabled = false;
   backupBtn.style.background = 'var(--accent-purple)';
 
-  // إظهار صندوق التأكيد المطور النيون مع زر بدء التنزيل المباشر فوراً دون وميض الصفحة
-  showCustomModal('📥 جاهزية ملف التحميل السحابي', `تم جمد وضغط الملف [${fileName}] بنجاح وجاهز للسحب الحركي للهاتف أو الكمبيوتر الآن!`, false, '', function () {
+  // إظهار صندوق التأكيد المطور مع زر بدء التنزيل المباشر الموثوق فوراً دون وميض
+  showCustomModal('📥 جاهزية ملف التحميل السحابي', `تم جمد وضغط ملف العالم [${fileName}] بنجاح وجاهز للسحب الحركي الآن! انقر زر التأكيد لبدء التنزيل الفوري.`, false, '', function () {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     link.download = fileName;
@@ -443,7 +501,7 @@ function handleZipOrFileDownloadReady(fileName, base64String) {
   });
 }
 
-// 12. الأوامر وسجلات الكونسل والجدولة والتحكم بالقدرة العامة
+// 14. الأوامر وسجلات الكونسل والجدولة والتحكم بالقدرة العامة
 function executeQuickCmd(rawCommand) {
   ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: rawCommand } }));
 }
@@ -476,14 +534,14 @@ document.getElementById('btnRestart').onclick = () => sendAction('RESTART_SERVER
 document.getElementById('btnRefresh').onclick = () => sendAction('GET_HOST_STATS');
 document.getElementById('btnSend').onclick = () => sendCommand();
 
-// سد ثغرة التحميل وتفعيل عداد الانتظار الذكي النيون
+// سد ثغرة أمر الباك أب المكسور وتفعيل عداد الانتظار الذكي النيون
 document.getElementById('btnDownloadBackup').onclick = function () {
   const backupBtn = this;
   backupBtn.innerHTML = '⏳ جاري معالجة وتوليد الباك أب الحقيقي...';
   backupBtn.disabled = true;
   backupBtn.style.background = '#444';
 
-  // إرسال الأكشن معزولاً وصارماً كـ Action للسوكيت وليس كنص في الكونسل!
+  // إرسال الطلب معزولاً وصارماً كـ Action للسوكيت وليس كنص في الكونسل!
   ws.send(JSON.stringify({ action: 'CREATE_ZIP_BACKUP' }));
 };
 

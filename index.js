@@ -1,6 +1,6 @@
 // ========================================================
-// 🚀 [Master Orchestrator: index.js - Part 1 of 2]
-// Sandboxed Subsystem Core, Live Port Handlers, & Streaming
+// 🚀 [ملف index.js المصلح الحديدي - الجزء 1 من 2]
+// السوكيت المركزي المحدث، منع تسريب الأوامر، وبث السجلات الحية
 // ========================================================
 
 const minecraft = require('./minecraft.js');
@@ -10,19 +10,19 @@ const fs = require('fs');
 const path = require('path');
 
 console.log('========================================================');
-console.log(' ⚡ [نظام النواة السحابي الحديدي - Sandbox Core v2] يعمل... ');
+console.log(' ⚡ [نظام النواة السحابي الحديدي - Sandbox Core v3] يعمل... ');
 console.log('========================================================');
 
-// 1. Fire up and boot the Minecraft Java process automatically
+// 1. تشغيل وإقلاع سيرفر ماين كرافت تلقائياً
 minecraft.server.startServer();
 
-// 2. Launch the standalone central WebSocket server on port 8080
+// 2. إنشاء وتأمين خادم السوكيت المركزي المستقل على المنفذ 8080
 const wss = new WebSocketServer({ port: 8080 });
 console.log('[Socket Server]: يستمع الآن بأمان على الرابط: ws://localhost:8080');
 
-// 3. Bind live log streams and broadcast them instantly as unified JSON packets
+// 3. ربط مخرجات السيرفر الحية وبثها فوراً كـ JSON لكافة الواجهات والبوتات
 minecraft.server.setLogListener((logLine) => {
-  // Dynamically maintain player count and connection status via pure RegEx filters
+  // تحديث قائمة اللاعبين حياً وحالة السيرفر
   minecraft.info.parseServerLog(logLine);
 
   const logPackage = JSON.stringify({
@@ -31,28 +31,36 @@ minecraft.server.setLogListener((logLine) => {
   });
 
   wss.clients.forEach((client) => {
-    if (client.readyState === 1) { // OPEN connection check
+    if (client.readyState === 1) { // OPEN
       client.send(logPackage);
     }
   });
 });
 // ========================================================
-// 🚀 [Master Orchestrator: index.js - Part 2 of 2]
-// Secure Sandbox Action Handler, Binary Streaming & Maintenance
+// 🚀 [ملف index.js المصلح الحديدي - الجزء 2 من 3]
+// مستمع اتصالات السوكيت، معالج الأوامر المعزول، وأحداث القدرة والخصائص
 // ========================================================
 
-// 4. Listen for oncoming connections and route JSON packages safely
+// 4. الإنصات لربط واجهات الويب المستقلة والبوتات ومعالجة حزم البيانات المتقدمة حياً
 wss.on('connection', (ws) => {
-  console.log('[Socket Server]: A new administrative client has synchronized with the backend.');
-  ws.send(JSON.stringify({ type: 'SYSTEM', data: 'Connected to Sandboxed Minecraft Backend v2' }));
+  console.log('[Socket Server]: متصل إداري جديد انضم لقنوات التحكم السحابية المحدثة v3.');
+  ws.send(JSON.stringify({ type: 'SYSTEM', data: 'Connected to Hardened Minecraft Core v3' }));
 
   ws.on('message', async (message) => {
     try {
-      const request = JSON.parse(message.toString());
+      // تصفية صارمة للمدخلات لمنع تسريب نصوص السوكيت الخام لملف الجار الخاص بماين كرافت
+      const rawMessage = message.toString().trim();
+      if (!rawMessage.startsWith('{') || !rawMessage.endsWith('}')) {
+        // إذا لم تكن حزمة JSON، يتم تمريرها فوراً كأمر مباشر لكونسل اللعبة
+        minecraft.server.executeCommand(rawMessage);
+        return;
+      }
+
+      const request = JSON.parse(rawMessage);
       const { action, payload } = request;
 
       switch (action) {
-        // ---- A) Power & Execution Control ----
+        // ---- أ) أوامر التحكم بالقدرة والتشغيل الحي ----
         case 'START_SERVER':
           minecraft.server.startServer();
           break;
@@ -63,10 +71,12 @@ wss.on('connection', (ws) => {
           minecraft.server.restartServer();
           break;
         case 'MINECRAFT_COMMAND':
-          minecraft.server.executeCommand(payload.command);
+          if (payload && payload.command) {
+            minecraft.server.executeCommand(payload.command);
+          }
           break;
 
-        // ---- B) Host Resource Analytics & Configuration Sync ----
+        // ---- ب) جلب الموارد والإحصائيات الحية الشاملة وقراءة القرص ----
         case 'GET_HOST_STATS':
           ws.send(JSON.stringify({
             type: 'HOST_STATS',
@@ -85,7 +95,7 @@ wss.on('connection', (ws) => {
           }));
           break;
 
-        // ---- C) Detailed Advanced Player Profiling ----
+        // ---- ج) جلب بيانات وتفاصيل اللاعب المتقدمة والموارد ----
         case 'GET_PLAYER_ADVANCED_DATA':
           const advancedData = minecraft.info.getPlayerDataDetails(payload.playerName);
           ws.send(JSON.stringify({
@@ -94,7 +104,7 @@ wss.on('connection', (ws) => {
           }));
           break;
 
-        // ---- D) Server Properties Engine (Hardened max-players handling) ----
+        // ---- د) ميزة تعديل خيارات السيرفر (إصلاح حفظ الحد الأقصى للاعبين) ----
         case 'UPDATE_SERVER_PROPERTY':
           let successProp = false;
           if (payload.key === 'max-players') {
@@ -116,14 +126,29 @@ wss.on('connection', (ws) => {
         case 'SET_CRACK_TOGGLE':
           minecraft.world.setCrackAllowed(payload.allowed);
           break;
+        // ========================================================
+        // 🚀 [ملف index.js المصلح الحديدي - الجزء 3 من 3]
+        // إعادة إنشاء العالم بالريستارت الفوري، معالجات الساند بوكس، والجدولة
+        // ========================================================
+
+        // 🗺️ إصلاح حديدي: ربط إعادة إنشاء وتصفير العالم بالريستارت الفوري التلقائي لإنتاج خريطة بكر
         case 'RECREATE_FRESH_WORLD':
-          const successRecreate = minecraft.world.recreateFreshWorld();
-          ws.send(JSON.stringify({ type: 'WORLD_RECREATE_STATUS', success: successRecreate }));
+          console.log('🚨 [نظام النواة]: تم استقبال طلب تصفير الخريطة. جاري البدء في دورة ريستارت حركية صارمة...');
+          minecraft.server.stopServer();
+
+          // تأخير قصير للتأكد من إغلاق عملية الجافا بالكامل وتحرير ملفات الهارد ديسك
+          setTimeout(() => {
+            const successRecreate = minecraft.world.recreateFreshWorld();
+            ws.send(JSON.stringify({ type: 'WORLD_RECREATE_STATUS', success: successRecreate }));
+
+            // الإقلاع التلقائي الفوري الصارم فور اكتمال المسح لتهيئة الخريطة الجديدة
+            console.log('🚀 [نظام النواة]: اكتمل مسح مجلد العالم التالف. جاري إيقاظ الجافا لتوليد الـ Chunks البكر...');
+            minecraft.server.startServer();
+          }, 4000);
           break;
 
-        // ---- E) World Map Backup Generation (.zip) ----
+        // ---- هـ) ميزة إنشاء وإرسال باك اب العالم بصيغة .zip حقيقية باينري ----
         case 'CREATE_ZIP_BACKUP':
-          ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'PROCESSING', msg: 'Zipping world directory...' }));
           const zipPath = await minecraft.backup.createZipBackup();
           if (zipPath) {
             const fileBuffer = fs.readFileSync(zipPath);
@@ -133,11 +158,11 @@ wss.on('connection', (ws) => {
               fileData: fileBuffer.toString('base64')
             }));
           } else {
-            ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'FAILED', msg: 'Failed to create compressed map file.' }));
+            ws.send(JSON.stringify({ type: 'BACKUP_STATUS', status: 'FAILED', msg: 'فشل إنشاء النسخة المضغوطة' }));
           }
           break;
 
-        // ---- F) Sandbox File Explorer Subsystem ----
+        // ---- و) مدير الملفات المطور والمعزول حديدياً (world و plugins حصراً) ----
         case 'BROWSE_SERVER_DIRECTORY':
           const dirItems = minecraft.files.browseDirectory(payload.relativePath, payload.isPluginArea);
           ws.send(JSON.stringify({
@@ -184,16 +209,17 @@ wss.on('connection', (ws) => {
           ws.send(JSON.stringify({ type: 'ERROR', data: 'Unknown Action Received' }));
       }
     } catch (error) {
+      // قفل آمن في الخلفية لمنع كراش السوكيت وتمرير الأوامر المفتوحة
       minecraft.server.executeCommand(message.toString().trim());
     }
   });
 });
 
-// 5. Active Sleep Scheduler / Idle Proxy Checker (Runs safely every 60 seconds)
+// 5. نظام النوم والجدولة الآلي عند الخمول والـ Proxy كل دقيقة
 setInterval(() => {
   minecraft.scheduler.checkServerIdle();
 }, 60000);
 
-// 6. Direct Terminal Standard Input Hook for local master override commands
+// 6. تفعيل الـ Terminal المحلي للتحكم اليدوي المباشر في كونسل النواة
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-rl.on('line', (line) => { minecraft.world.executeCommand ? minecraft.world.executeCommand(line) : minecraft.server.executeCommand(line); });
+rl.on('line', (line) => { minecraft.server.executeCommand(line); });
