@@ -1,21 +1,24 @@
 // ========================================================
-// 🤖 [بوت تلجرام المطور الشامل - الجزء 1 من 3]
-// استيراد الحزم، دوال الحماية، والتصميم الهندسي للقوائم والأزرار
+// 🤖 [بوت تلجرام المطور الفائق - الجزء 1 من 3]
+// استيراد الحزم، الحماية باليوزر نيم، وتصميم الأزرار الرسومية الموحدة
 // ========================================================
 
 const { Telegraf, Markup } = require('telegraf');
 const WebSocket = require('ws');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config({ path: '../.env' });
 
-// تأسيس كائن البوت والاتصال الفوري بسوكيت النواة الخلفية للمشروع (البورت 8080)
+// تأسيس كائن البوت والاتصال الفوري بسوكيت النواة الخلفية (البورت 8080)
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const ws = new WebSocket(process.env.SOCKET_URL);
 
-// متغير الذاكرة المؤقتة لحفظ أسماء اللاعبين عند تطبيق عقوبات الطرد والحظر
+// متغيرات الذاكرة المؤقتة لحفظ مسارات التصفح الحالية وأسماء اللاعبين المستهدفين
 let selectedPlayerContext = "";
+let currentTelegramRelativePath = "";
 
 /**
- * دالة حماية صارمة للتأكد من تطابق اسم المستخدم (Username) مع ملف الـ .env
+ * دالة حماية صارمة للتحقق من اسم المستخدم (Username) من الـ .env
  */
 function isAdmin(ctx) {
   if (!ctx.from || !ctx.from.username) return false;
@@ -26,16 +29,16 @@ function isAdmin(ctx) {
 // 🎨 التصميم البصري والشجري للقوائم التفاعلية (Inline Keyboards)
 // ========================================================
 
-// 1. القائمة الرئيسية الكبرى الشاملة (Main Dashboard)
+// 1. القائمة الرئيسية الشاملة لجميع محطات أترنوس (Main Dashboard)
 const mainKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('👥 اللاعبين أونلاين 🎮', 'MENU_PLAYERS')],
-  [Markup.button.callback('👑 الأدمنية والمسؤولين (OP)', 'MENU_OPS')],
-  [Markup.button.callback('🛡️ القائمة البيضاء (Whitelist)', 'MENU_WL')],
-  [Markup.button.callback('🚫 المحظورين (Banned Players)', 'MENU_BANLIST')],
-  [Markup.button.callback('📟 الآي بي المحظور (Banned IPs)', 'MENU_IPLIST')],
+  [Markup.button.callback('👑 المسؤولين (OP)', 'MENU_OPS'), Markup.button.callback('🛡️ الوايت لست', 'MENU_WL')],
+  [Markup.button.callback('🚫 المحظورين (Ban)', 'MENU_BANLIST'), Markup.button.callback('📟 الآي بي المحظور', 'MENU_IPLIST')],
+  [Markup.button.callback('📁 مدير ملفات السيرفر والعالم ⚙️', 'TG_MENU_FILES')],
+  [Markup.button.callback('⚙️ لوحة إعدادات السيرفر الكاملة', 'TG_MENU_SETTINGS')],
   [
     Markup.button.callback('📊 فحص الموارد', 'MENU_STATS'),
-    Markup.button.callback('🛠️ الصيانة', 'MENU_MANAGE'),
+    Markup.button.callback('💾 تنزيل العالم .zip', 'TG_ACT_ZIP_BACKUP'),
     Markup.button.callback('🎮 القدرة', 'MENU_POWER')
   ]
 ]);
@@ -50,20 +53,20 @@ const powerKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('⬅️ العودة للقائمة الرئيسية', 'MENU_MAIN')]
 ]);
 
-// 3. قائمة الصيانة والأدوات المتقدمة والملفات (Management Menu)
-const manageKeyboard = Markup.inlineKeyboard([
-  [Markup.button.callback('💾 إنشاء نسخة احتياطية (Backup)', 'ACT_BACKUP')],
-  [Markup.button.callback('🔌 عرض المودات والبلقنز المثبتة', 'ACT_PLUGINS')],
+// 3. لوحة إعدادات وخصائص السيرفر المتقدمة (Server Settings Board)
+const settingsKeyboard = Markup.inlineKeyboard([
+  [Markup.button.callback('🎮 وضع اللعب الافتراضي', 'TG_SET_GAMEMODE'), Markup.button.callback('☠️ صعوبة العالم', 'TG_SET_DIFFICULTY')],
+  [Markup.button.callback('🔓 تبديل وضع الكراك', 'TG_TOGGLE_CRACK'), Markup.button.callback('🛡️ تبديل الوايت لست', 'TG_TOGGLE_WL')],
   [Markup.button.callback('⬅️ العودة للقائمة الرئيسية', 'MENU_MAIN')]
 ]);
 
-// 4. زر العودة السريع الموحد للقائمة الرئيسية (Back to Home)
+// 4. زر العودة السريع الموحد للقائمة الرئيسية
 const backToMainKeyboard = Markup.inlineKeyboard([
   [Markup.button.callback('⬅️ العودة للقائمة الرئيسية', 'MENU_MAIN')]
 ]);
 
 // ========================================================
-// 🚀 أحداث الترحيب والإقلاع الأولي للمستخدم
+// 🚀 أحداث الترحيب والإطلاق الأولي للمستخدم الأدمن
 // ========================================================
 
 bot.start((ctx) => {
@@ -73,55 +76,42 @@ bot.start((ctx) => {
   }
 
   ctx.reply(
-    '🎮 *مرحباً بك في غرفة تحكم ماين كرافت السحابية المحدثة!*\n\n' +
-    'اللوحة متزامنة بالكامل الآن مع قراءة ملفات السيرفر وجاهزة لإدارة اللاعبين والقوائم الخمس بنظام النقر.\n' +
+    '🎮 *مرحباً بك في غرفة تحكم سيرفر ماين كرافت السحابية الفائقة!*\n\n' +
+    'اللوحة مشحونة بكامل ميزات أترنوس: إدارة الملفات، كشف جرد الحساب، تنزيل الـ zip، وتعديل الخصائص بنظام النقر.\n' +
     'اختر أحد الأقسام من الأزرار أدناه للبدء:',
     { parse_mode: 'Markdown', ...mainKeyboard }
   );
 });
 // ========================================================
-// 🤖 [بوت تلجرام المطور الشامل - الجزء 2 من 3]
-// محرك التنقل، إدارة المتصلين وعقوباتهم، وقائمة المسؤولين (OP)
+// 🤖 [بوت تلجرام المطور الفائق - الجزء 2 من 3]
+// محرك التنقل، كشف جرد الحساب (E-View)، ولوحة خيارات السيرفر
 // ========================================================
 
-// ==========================================
-// 🔄 محرك التنقل بين القوائم العامة
-// ==========================================
-
+// معالجة الانتقال والقوائم الأساسية الشجرية
 bot.action('MENU_MAIN', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery('❌ غير مسموح لك.');
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ctx.answerCbQuery();
-  ctx.editMessageText(
-    '🎮 *لوحة تحكم ماين كرافت السحابية الرئيسية*\n\nاختر القسم المطلوب من الأزرار أدناه للتحكم بالسيرفر:',
-    { parse_mode: 'Markdown', ...mainKeyboard }
-  );
+  ctx.editMessageText('🎮 *لوحة تحكم سيرفر ماين كرافت السحابية الرئيسية*\n\nاختر القسم المطلوب من الأزرار أدناه للتحكم:', { parse_mode: 'Markdown', ...mainKeyboard });
 });
 
 bot.action('MENU_POWER', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ctx.answerCbQuery();
-  ctx.editMessageText(
-    '⚡ *قسم التحكم بالقدرة والتشغيل*\n\nيمكنك التحكم بحالة إقلاع وإغلاق السيرفر الفعلية عبر الأزرار أدناه:',
-    { parse_mode: 'Markdown', ...powerKeyboard }
-  );
+  ctx.editMessageText('⚡ *قسم التحكم بالقدرة والتشغيل الحي:*', { parse_mode: 'Markdown', ...powerKeyboard });
 });
 
-bot.action('MENU_MANAGE', (ctx) => {
+bot.action('TG_MENU_SETTINGS', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ctx.answerCbQuery();
-  ctx.editMessageText(
-    '🛠️ *قسم الصيانة والأدوات المتقدمة*\n\nإدارة الملفات والنسخ الاحتياطية للسيرفر بنظام النقر المستقل:',
-    { parse_mode: 'Markdown', ...manageKeyboard }
-  );
+  ctx.editMessageText('⚙️ *لوحة تعديل إعدادات وخصائص السيرفر الكاملة:*\n\nاختر الإعداد المراد تعديله بالنقرات السريعة فوراً:', { parse_mode: 'Markdown', ...settingsKeyboard });
 });
 
 // ==========================================
-// 👥 1. محرك إدارة اللاعبين المتصلين وعقوباتهم (Online Players)
+// 👥 1. إدارة اللاعبين وكشف بيانات جرد حسابهم المتقدمة (E-View)
 // ==========================================
-
 bot.action('MENU_PLAYERS', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('👥 جاري فحص اللاعبين أونلاين...');
+  ctx.answerCbQuery('👥 جاري فحص اللاعبين...');
   ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
   const handleOnline = (data) => {
@@ -133,29 +123,274 @@ bot.action('MENU_PLAYERS', (ctx) => {
         if (list.length === 0) {
           return ctx.reply('👥 *إدارة اللاعبين:*\n\nلا يوجد لاعبين متصلين حالياً داخل السيرفر.', { parse_mode: 'Markdown', ...backToMainKeyboard });
         }
-        const buttons = list.map(p => [Markup.button.callback(`👤 اللاعب: ${p}`, `TARGET_${p}`)]);
+        const buttons = list.map(p => [
+          Markup.button.callback(`👤 اللاعب: ${p}`, `TARGET_${p}`),
+          Markup.button.callback('🧰 جرد الحساب (E)', `TG_INV_${p}`)
+        ]);
         buttons.push([Markup.button.callback('⬅️ العودة للقائمة الرئيسية', 'MENU_MAIN')]);
-        ctx.reply('👥 *اللاعبين المتصلين حالياً:*\n\nاختر لاعباً لفتح خيارات العقوبات والترقية:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
+        ctx.reply('👥 *اللاعبين المتصلين حالياً:*\n\nانقر على اسم اللاعب للعقوبات أو زر الـ 🧰 لكشف بيانات حسابه بالكامل:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
       }
     } catch (e) { }
   };
   ws.on('message', handleOnline);
 });
 
+// استقبال طلب كشف بيانات جرد حساب اللاعب المتقدمة (Inventory Style)
+bot.action(/^TG_INV_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const playerName = ctx.match[1];
+  ctx.answerCbQuery('🧰 جاري سحب بيانات الحساب المتقدمة...');
+
+  ws.send(JSON.stringify({ action: 'GET_PLAYER_ADVANCED_DATA', payload: { playerName } }));
+
+  const handleInvData = (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'PLAYER_ADVANCED_DATA' && response.data.name === playerName) {
+        ws.off('message', handleInvData);
+        const p = response.data;
+
+        ctx.reply(
+          `🧰 *نافذة بيانات وجرد حساب اللاعب:* \`${p.name}\`\n` +
+          `━━━━━━━━━━━━━━━━━━\n` +
+          `🆔 *الـ UUID الرقمي:* \`${p.uuid}\`\n` +
+          `⏱️ *إجمالي وقت اللعب:* \`${p.playTime}\`\n` +
+          `💀 *عدد مرات الموت:* \`${p.deaths}\` ميتة\n` +
+          `🦘 *إجمالي القفزات:* \`${p.jumps}\` قفزة\n` +
+          `⚔️ *قتلى اللاعبين:* \`${p.playerKills}\` لاعب\n` +
+          `🏹 *قتلى الوحوش:* \`${p.mobKills}\` وحش\n` +
+          `🏆 *الإنجازات المفتوحة:* \`${p.advancementsCount}\` إنجاز\n` +
+          `━━━━━━━━━━━━━━━━━━`,
+          { parse_mode: 'Markdown', ...backToMainKeyboard }
+        );
+      }
+    } catch (e) { }
+  };
+  ws.on('message', handleInvData);
+});
+
+// ==========================================
+// ⚙️ 2. معالجة لوحة خيارات وإعدادات السيرفر (Aternos Board Options)
+// ==========================================
+bot.action('TG_SET_GAMEMODE', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  ctx.answerCbQuery();
+  const gmKeyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('Survival (البقاء)', 'TG_GM_survival'), Markup.button.callback('Creative (الإبداعي)', 'TG_GM_creative')],
+    [Markup.button.callback('Adventure (المغامرة)', 'TG_GM_adventure'), Markup.button.callback('Spectator (المشاهد)', 'TG_GM_spectator')],
+    [Markup.button.callback('⬅️ عودة للإعدادات', 'TG_MENU_SETTINGS')]
+  ]);
+  ctx.editMessageText('🎮 *اختر وضع اللعب الافتراضي الجديد (Gamemode):*', { parse_mode: 'Markdown', ...gmKeyboard });
+});
+
+bot.action(/^TG_GM_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const mode = ctx.match[1];
+  ws.send(JSON.stringify({ action: 'SET_GAMEMODE_SETTING', payload: { mode } }));
+  ctx.answerCbQuery(`تم تغيير وضع اللعب إلى ${mode}`);
+  ctx.reply(`✅ *[إعدادات السيرفر]:* تم تحديث وضع اللعب الافتراضي حياً إلى: \`${mode}\``, { parse_mode: 'Markdown', ...backToMainKeyboard });
+});
+
+bot.action('TG_SET_DIFFICULTY', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  ctx.answerCbQuery();
+  const diffKeyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('Peaceful (سلمي)', 'TG_DF_peaceful'), Markup.button.callback('Easy (سهل)', 'TG_DF_easy')],
+    [Markup.button.callback('Normal (عادي)', 'TG_DF_normal'), Markup.button.callback('Hard (صعب)', 'TG_DF_hard')],
+    [Markup.button.callback('⬅️ عودة للإعدادات', 'TG_MENU_SETTINGS')]
+  ]);
+  ctx.editMessageText('☠️ *اختر درجة صعوبة العالم الجديدة (Difficulty):*', { parse_mode: 'Markdown', ...diffKeyboard });
+});
+
+bot.action(/^TG_DF_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const difficulty = ctx.match[1];
+  ws.send(JSON.stringify({ action: 'SET_DIFFICULTY_SETTING', payload: { difficulty } }));
+  ctx.answerCbQuery(`تمت الصعوبة إلى ${difficulty}`);
+  ctx.reply(`✅ *[إعدادات السيرفر]:* تم تحديث صعوبة العالم حياً إلى: \`${difficulty}\``, { parse_mode: 'Markdown', ...backToMainKeyboard });
+});
+
+bot.action('TG_TOGGLE_CRACK', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  ctx.answerCbQuery('🔄 جاري تبديل وضع الحسابات المكركة...');
+  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
+
+  const handleCrack = (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'HOST_STATS') {
+        ws.off('message', handleCrack);
+        const isCrackAllowed = response.data.serverProperties['online-mode'] === 'false';
+        ws.send(JSON.stringify({ action: 'SET_CRACK_TOGGLE', payload: { allowed: !isCrackAllowed } }));
+        ctx.reply(`⚙️ *[إعدادات السيرفر]:* تم عكس خيار الدخول المكرك بنجاح إلى: \`${!isCrackAllowed}\` (يتطلب ريستارت لتطبيقه).`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+      }
+    } catch (e) { }
+  };
+  ws.on('message', handleCrack);
+});
+
+bot.action('TG_TOGGLE_WL', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  ctx.answerCbQuery('🔄 جاري تبديل حالة الوايت لست...');
+  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
+
+  const handleWlToggle = (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'HOST_STATS') {
+        ws.off('message', handleWlToggle);
+        const isWlEnabled = response.data.serverProperties['white-list'] === 'true';
+        ws.send(JSON.stringify({ action: 'SET_WHITELIST_TOGGLE', payload: { enable: !isWlEnabled } }));
+        ctx.reply(`⚙️ *[إعدادات السيرفر]:* تم تبديل حالة القائمة البيضاء (Whitelist) حياً إلى: \`${!isWlEnabled}\``, { parse_mode: 'Markdown', ...backToMainKeyboard });
+      }
+    } catch (e) { }
+  };
+  ws.on('message', handleWlToggle);
+});
+// ========================================================
+// 🤖 [بوت تلجرام المطور الفائق - الجزء 3 من 4]
+// متصفح ملفات السيرفر المطور بالنقر، ومحرك إرسال ملف الباك أب الـ zip للهاتف
+// ========================================================
+
+// ==========================================
+// 📁 3. محرك متصفح ومدير ملفات السيرفر والعالم (Aternos File Manager)
+// ==========================================
+
+bot.action('TG_MENU_FILES', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  currentTelegramRelativePath = ""; // تصفير المسار للبدء من المجلد الرئيسي للسيرفر
+  requestTelegramBrowseFolder(ctx, "");
+});
+
+function requestTelegramBrowseFolder(ctx, relativePath) {
+  currentTelegramRelativePath = relativePath;
+  ws.send(JSON.stringify({ action: 'BROWSE_SERVER_DIRECTORY', payload: { relativePath } }));
+
+  const handleFiles = (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'DIRECTORY_ITEMS_DATA' && response.currentPath === relativePath) {
+        ws.off('message', handleFiles);
+        const items = response.items || [];
+
+        if (items.length === 0) {
+          return ctx.reply(`📁 *متصفح الملفات:*\n\nالمجلد الحالي [\`${relativePath || 'الرئيسي'}\`] فارغ تماماً.`,
+            Markup.inlineKeyboard([[Markup.button.callback('🏠 الرئيسي', 'TG_MENU_FILES'), Markup.button.callback('⬅️ عودة', 'MENU_MAIN')]])
+          );
+        }
+
+        // بناء الأزرار التفاعلية للملفات والمجلدات (الحد الأقصى 20 ملف منعاً لتجاوز حجم رسائل تلجرام)
+        const fileButtons = items.slice(0, 20).map(item => {
+          const icon = item.isDirectory ? "📁" : "📄";
+          // إذا كان مجلداً نفتح داخله عند النقر، وإذا كان ملفاً نعطي خيار الحذف الصارم
+          const callbackId = item.isDirectory ? `TG_DIR_${item.relativePath.slice(0, 30)}` : `TG_DELF_${item.relativePath.slice(0, 30)}`;
+          return [Markup.button.callback(`${icon} ${item.name} (${item.size})`, callbackId)];
+        });
+
+        // إضافة أزرار التنقل والعودة في نهاية جدول الملفات
+        const navRow = [];
+        if (relativePath !== "") navRow.push(Markup.button.callback('🏠 الرئيسي', 'TG_MENU_FILES'));
+        navRow.push(Markup.button.callback('⬅️ القائمة الرئيسية', 'MENU_MAIN'));
+        fileButtons.push(navRow);
+
+        ctx.reply(`📁 *متصفح ملفات السيرفر حياً:*\n\n📂 المسار الحالي: \`/${relativePath}\`\n\n_انقر على المجلدات للتصفح تكرارياً، أو انقر على الملفات لحذفها من القرص:_`, {
+          parse_mode: 'Markdown',
+          ...Markup.inlineKeyboard(fileButtons)
+        });
+      }
+    } catch (e) { }
+  };
+  ws.on('message', handleFiles);
+}
+
+// الإنصات الذكي للنقر على المجلدات الفرعية (تبدأ بـ TG_DIR_)
+bot.action(/^TG_DIR_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const folderPath = ctx.match[1];
+  ctx.answerCbQuery(`فتح المجلد: ${folderPath}`);
+  requestTelegramBrowseFolder(ctx, folderPath);
+});
+
+// الإنصات الذكي لطلب حذف ملف من خلال التليجرام (تبدأ بـ TG_DELF_)
+bot.action(/^TG_DELF_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const filePath = ctx.match[1];
+  ctx.answerCbQuery();
+
+  const confirmKeyboard = Markup.inlineKeyboard([
+    [Markup.button.callback('⚠️ نعم، احذفه نهائياً', `TG_CONF_DEL_${filePath}`)],
+    [Markup.button.callback('❌ إلغاء والتراجع', 'TG_MENU_FILES')]
+  ]);
+  ctx.reply(`🗑️ *تأكيد الحذف الصارم:*\n\nهل أنت متأكد تماماً من حذف الملف: \`/${filePath}\` من قرص السيرفر الصارم؟`, { parse_mode: 'Markdown', ...confirmKeyboard });
+});
+
+bot.action(/^TG_CONF_DEL_(.+)$/, (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  const filePath = ctx.match[1];
+  ws.send(JSON.stringify({ action: 'DELETE_FILE_OR_FOLDER', payload: { relativePath: filePath } }));
+  ctx.answerCbQuery(`تم حذف الملف`);
+  ctx.reply(`✅ *[مدير الملفات]:* تم تدمير وحذف الملف \`/${filePath}\` من القرص بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+});
+
+// ==========================================
+// 💾 4. محرك إنتاج وإرسال ملف الباك أب الـ zip للهاتف مباشرة
+// ==========================================
+
+bot.action('TG_ACT_ZIP_BACKUP', (ctx) => {
+  if (!isAdmin(ctx)) return ctx.answerCbQuery();
+  ctx.answerCbQuery('⏳ جاري ضغط السيرفر...');
+  ctx.reply('💾 *[نظام النسخ الاحتياطي]:* جاري ضغط مجلد العالم وتوليد ملف `.zip` حقيقي حالياً... يرجى الانتظار وعدم تكرار الضغط لحين إرسال الملف لشاتك بسلام.');
+
+  // طلب إنتاج الملف المضغوط من النواة الخلفية بالسوكيت
+  ws.send(JSON.stringify({ action: 'CREATE_ZIP_BACKUP' }));
+
+  const handleZipIncoming = async (data) => {
+    try {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'BACKUP_ZIP_DOWNLOAD') {
+        ws.off('message', handleZipIncoming); // فك الاستماع فور الاستلام
+
+        const { fileName, fileData } = response;
+        // تحويل الـ Base64 الممرر من السوكيت إلى Buffer باينري حقيقي ليتلجرام
+        const fileBuffer = Buffer.from(fileData, 'base64');
+
+        ctx.reply('📥 *[نظام النسخ الاحتياطي]:* تم ضغط السيرفر بنجاح! جاري رفع وإرسال الملف المضغوط لشاتك الآن...');
+
+        // إرسال الملف كـ Document حقيقي ومستند قابل للتنزيل على الهاتف فوراً
+        await ctx.replyWithDocument({
+          source: fileBuffer,
+          filename: fileName
+        }, {
+          caption: `💾 **ملف نسخة احتياطية (.zip) كاملة لعالمك حياً**\n\n📅 التاريخ: \`${new Date().toLocaleString('ar-EG')}\`\n🗜️ الصيغة: Zip Archive\n\n_يمكنك فك ضغطه ونقله لأي استضافة أخرى بسلام._`,
+          parse_mode: 'Markdown'
+        });
+      }
+    } catch (error) {
+      console.error('[Telegram Backup Error]:', error);
+    }
+  };
+  ws.on('message', handleZipIncoming);
+});
+// ========================================================
+// 🤖 [بوت تلجرام المطور الفائق - الجزء 4 من 4]
+// لوحة عقوبات اللاعبين، أزرار القدرة العامة، وإدارة الجداول الحية من القرص
+// ========================================================
+
 bot.action(/^TARGET_(.+)$/, (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   const playerName = ctx.match[1];
   selectedPlayerContext = playerName;
-  ctx.answerCbQuery(`🎯 تحديد: ${playerName}`);
+  ctx.answerCbQuery(`تحديد: ${playerName}`);
 
   const playerKeyboard = Markup.inlineKeyboard([
     [Markup.button.callback('🥾 طرد (Kick)', 'P_ACT_KICK'), Markup.button.callback('🚫 حظر (Ban)', 'P_ACT_BAN')],
     [Markup.button.callback('👑 ترقية (OP)', 'P_ACT_OP'), Markup.button.callback('🛡️ سحب رتبة', 'P_ACT_DEOP')],
-    [Markup.button.callback('⬅️ العودة للقائمة', 'MENU_PLAYERS')]
+    [Markup.button.callback('👥 قائمة اللاعبين', 'MENU_PLAYERS')]
   ]);
-  ctx.editMessageText(`🛠️ *لوحة التحكم باللاعب:* \`${playerName}\`\n\nاختر العقوبة أو الإجراء لتنفيذه فوراً:`, { parse_mode: 'Markdown', ...playerKeyboard });
+  ctx.editMessageText(`🛠️ *لوحة التحكم باللاعب الصافي:* \`${playerName}\`\n\nاختر العقوبة المراد تنفيذها فوراً:`, { parse_mode: 'Markdown', ...playerKeyboard });
 });
 
+// تنفيذ عقوبات اللاعبين الفردية المتصلين حياً حياً
 bot.action('P_ACT_KICK', (ctx) => {
   if (!isAdmin(ctx) || !selectedPlayerContext) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `kick ${selectedPlayerContext} طرد سريع عبر تلجرام` } }));
@@ -184,166 +419,31 @@ bot.action('P_ACT_DEOP', (ctx) => {
   ctx.reply(`🛡️ *[نظام الرتب]:* تم سحب رتبة المسؤول (OP) من اللاعب \`${selectedPlayerContext}\` بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
-// ==========================================
-// 👑 2. إدارة قائمة المسؤولين والأدمنية (OP List)
-// ==========================================
-
-bot.action('MENU_OPS', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('جاري سحب المسؤولين...');
-  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
-
-  const handleOps = (data) => {
-    try {
-      const response = JSON.parse(data.toString());
-      if (response.type === 'HOST_STATS') {
-        ws.off('message', handleOps);
-        const list = response.data.opsList || [];
-        if (list.length === 0) return ctx.reply('👑 *قائمة المسؤولين:*\n\nلا يوجد أدمنية معينين في ملف ops.json حالياً.', { parse_mode: 'Markdown', ...backToMainKeyboard });
-        const buttons = list.map(p => [Markup.button.callback(`🛡️ سحب OP من: ${p}`, `DEOP_TXT_${p}`)]);
-        buttons.push([Markup.button.callback('⬅️ عودة للقائمة الرئيسية', 'MENU_MAIN')]);
-        ctx.reply('👑 *المسؤولين الحاليين (OP):*\n\nاضغط على أي لاعب لسحب صلاحياته فورا عبر الكونسل:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
-      }
-    } catch (e) { }
-  };
-  ws.on('message', handleOps);
-});
-
-bot.action(/^DEOP_TXT_(.+)$/, (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  const p = ctx.match[1];
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `deop ${p}` } }));
-  ctx.answerCbQuery(`تم سحب OP من ${p}`);
-  ctx.reply(`🛡️ تم سحب رتبة المسؤول من اللاعب \`${p}\` بنجاح من القرص.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
-});
-// ========================================================
-// 🤖 [بوت تلجرام المطور الشامل - الجزء 3 من 3]
-// إدارة الوايت لست، المحظورين، الآي بي، الموارد، وأزرار القدرة العامة
-// ========================================================
-
-// ==========================================
-// 🛡️ 3. إدارة القائمة البيضاء (Whitelist Menu)
-// ==========================================
-bot.action('MENU_WL', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('جاري سحب الوايت لست...');
-  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
-
-  const handleWl = (data) => {
-    try {
-      const response = JSON.parse(data.toString());
-      if (response.type === 'HOST_STATS') {
-        ws.off('message', handleWl);
-        const list = response.data.whitelistList || [];
-        if (list.length === 0) return ctx.reply('🛡️ *القائمة البيضاء:*\n\nالقائمة فارغة حالياً في ملف whitelist.json.', { parse_mode: 'Markdown', ...backToMainKeyboard });
-        const buttons = list.map(p => [Markup.button.callback(`❌ إزالة: ${p}`, `RM_WL_${p}`)]);
-        buttons.push([Markup.button.callback('⬅️ عودة', 'MENU_MAIN')]);
-        ctx.reply('🛡️ *قائمة اللاعبين المصرح لهم (Whitelist):*\n\nانقر لإزالة أي لاعب ومنعه من الدخول:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
-      }
-    } catch (e) { }
-  };
-  ws.on('message', handleWl);
-});
-
-bot.action(/^RM_WL_(.+)$/, (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  const p = ctx.match[1];
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `whitelist remove ${p}` } }));
-  ctx.answerCbQuery(`تمت إزالة ${p}`);
-  ctx.reply(`✅ تمت إزالة اللاعب \`${p}\` من القائمة البيضاء بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
-});
-
-// ==========================================
-// 🚫 4. إدارة اللاعبين المحظورين (Banned Players)
-// ==========================================
-bot.action('MENU_BANLIST', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('جاري سحب المحظورين...');
-  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
-
-  const handleBan = (data) => {
-    try {
-      const response = JSON.parse(data.toString());
-      if (response.type === 'HOST_STATS') {
-        ws.off('message', handleBan);
-        const list = response.data.bannedPlayersList || [];
-        if (list.length === 0) return ctx.reply('🚫 *قائمة المحظورين:*\n\nلا يوجد لاعبين محظورين حالياً في السيرفر.', { parse_mode: 'Markdown', ...backToMainKeyboard });
-        const buttons = list.map(p => [Markup.button.callback(`🟢 فك حظر: ${p}`, `PARDON_TXT_${p}`)]);
-        buttons.push([Markup.button.callback('⬅️ عودة', 'MENU_MAIN')]);
-        ctx.reply('🚫 *اللاعبين المحظورين نهائياً (Ban List):*\n\nانقر على اسم اللاعب لفك الحظر عنه تلقائياً:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
-      }
-    } catch (e) { }
-  };
-  ws.on('message', handleBan);
-});
-
-bot.action(/^PARDON_TXT_(.+)$/, (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  const p = ctx.match[1];
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `pardon ${p}` } }));
-  ctx.answerCbQuery(`تم فك حظر ${p}`);
-  ctx.reply(`✅ تم إلغاء حظر اللاعب \`${p}\` ويمكنه الدخول للعب الآن.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
-});
-
-// ==========================================
-// 📟 5. إدارة الآي بي المحظور (Banned IPs)
-// ==========================================
-bot.action('MENU_IPLIST', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('جاري سحب الآي بي المحظور...');
-  ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
-
-  const handleIp = (data) => {
-    try {
-      const response = JSON.parse(data.toString());
-      if (response.type === 'HOST_STATS') {
-        ws.off('message', handleIp);
-        const list = response.data.bannedIpsList || [];
-        if (list.length === 0) return ctx.reply('📟 *عناوين الآي بي المحظورة:*\n\nلا يوجد آي بي محظور حالياً في ملف banned-ips.json.', { parse_mode: 'Markdown', ...backToMainKeyboard });
-        const buttons = list.map(ip => [Markup.button.callback(`🟢 فك آي بي: ${ip}`, `PARDONIP_TXT_${ip}`)]);
-        buttons.push([Markup.button.callback('⬅️ عودة', 'MENU_MAIN')]);
-        ctx.reply('📟 *عناوين الآي بي المحظورة (IP Ban List):*\n\nانقر على العنوان لإلغاء حظره فورا:', { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
-      }
-    } catch (e) { }
-  };
-  ws.on('message', handleIp);
-});
-
-bot.action(/^PARDONIP_TXT_(.+)$/, (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  const ip = ctx.match[1];
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `pardon-ip ${ip}` } }));
-  ctx.answerCbQuery(`تم فك آي بي ${ip}`);
-  ctx.reply(`✅ تم إلغاء حظر عنوان الآي بي \`${ip}\` بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
-});
-
-// ==========================================
-// 🔌 6. معالجة أزرار التشغيل والموارد والصيانة العامة
-// ==========================================
+// أوامر الإغلاق والتشغيل والريستارت للملف المساعد
 bot.action('ACT_START', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'START_SERVER' }));
   ctx.answerCbQuery('⚡ جاري التشغيل...');
-  ctx.reply('🚀 *[نظام القدرة]:* جاري بدء تشغيل وإيقاظ السيرفر وتوليد عملية الجافا التابعة له حالياً...', { parse_mode: 'Markdown' });
+  ctx.reply('🚀 *[نظام القدرة]:* جاري بدء تشغيل السيرفر وتوليد عملية الجافا التابعة له حالياً...');
 });
 
 bot.action('ACT_STOP', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'STOP_SERVER' }));
   ctx.answerCbQuery('🛑 جاري الإيقاف...');
-  ctx.reply('🛑 *[نظام القدرة]:* تم إرسال أمر الإيقاف الآمن لحفظ ملفات الخريطة وبيانات اللاعبين على القرص.', { parse_mode: 'Markdown' });
+  ctx.reply('🛑 *[نظام القدرة]:* تم إرسال أمر الإيقاف الآمن (Stop) لحفظ ملفات الخريطة بسلام.');
 });
 
 bot.action('ACT_RESTART', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'RESTART_SERVER' }));
   ctx.answerCbQuery('🔄 جاري إعادة التشغيل...');
-  ctx.reply('🔄 *[نظام القدرة]:* تم البدء في عملية إعادة التشغيل الذكية والآمنة لتحديث الملفات والمنفذ حالياً.', { parse_mode: 'Markdown' });
+  ctx.reply('🔄 *[نظام القدرة]:* تم البدء في عملية إعادة التشغيل الذكية لإنعاش السيرفر والمنفذ حالياً.');
 });
 
 bot.action('MENU_STATS', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('📊 جاري سحب تقرير الموارد...');
+  ctx.answerCbQuery('📊 جاري سحب الموارد...');
   ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
   const handleStats = (data) => {
@@ -353,35 +453,70 @@ bot.action('MENU_STATS', (ctx) => {
         ws.off('message', handleStats);
         const { ram, cpu, status, playersCount } = response.data;
         let emojiStatus = status === 'ONLINE' ? '🟢 يعمل حالياً' : '🔴 في وضع النوم / مطفأ';
-        ctx.reply(`📊 *تقرير أداء الخادم وجهاز الاستضافة:*\n\n🖥 *الحالة:* ${emojiStatus}\n📟 *المعالج:* \`${cpu}\`\n💾 *الرام:* \`${ram}\`\n👥 *اللاعبين أونلاين:* \`${playersCount}\``, { parse_mode: 'Markdown', ...backToMainKeyboard });
+        ctx.reply(`📊 *تقرير أداء السيرفر وجهاز الاستضافة:*\n\n🖥️ *الحالة:* ${emojiStatus}\n📟 *المعالج:* \`${cpu}\`\n💾 *الرام:* \`${ram}\`\n👥 *اللاعبين أونلاين:* \`${playersCount}\` لاعب`, { parse_mode: 'Markdown', ...backToMainKeyboard });
       }
     } catch (e) { }
   };
   ws.on('message', handleStats);
 });
 
-bot.action('ACT_BACKUP', (ctx) => {
-  if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('💾 جاري أخذ نسخة احتياطية...');
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: 'save-all' } }));
-  ctx.reply('💾 *[نظام الحفظ]:* تم إرسال طلب حفظ البيانات لإنشاء نسخة احتياطية مضغوطة من المجلد `world` بنجاح.', { parse_mode: 'Markdown', ...backToMainKeyboard });
+// الجداول الأربعة الحية (OP, Whitelist, BanList, IPs) تلقائياً بنظام النقر والقراءة من القرص حياً حياً
+const simpleMenusConfigs = {
+  'MENU_OPS': { prop: 'opsList', cmd: 'deop', prefix: 'DEOP_TXT_', txt: '👑 المسؤولين الحاليين (OP)', btnTxt: '🛡️ سحب OP من' },
+  'MENU_WL': { prop: 'whitelistList', cmd: 'whitelist remove', prefix: 'RM_WL_', txt: '🛡️ القائمة البيضاء (Whitelist)', btnTxt: '❌ إزالة' },
+  'MENU_BANLIST': { prop: 'bannedPlayersList', cmd: 'pardon', prefix: 'PARDON_TXT_', txt: '🚫 اللاعبين المحظورين (Ban List)', btnTxt: '🟢 فك حظر' },
+  'MENU_IPLIST': { prop: 'bannedIpsList', cmd: 'pardon-ip', prefix: 'PARDONIP_TXT_', txt: '📟 الآي بي المحظور (IP Ban List)', btnTxt: '🟢 فك آي بي' }
+};
+
+Object.keys(simpleMenusConfigs).forEach(menuId => {
+  bot.action(menuId, (ctx) => {
+    if (!isAdmin(ctx)) return ctx.answerCbQuery();
+    ctx.answerCbQuery();
+    ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
+
+    const handleSimple = (data) => {
+      try {
+        const response = JSON.parse(data.toString());
+        if (response.type === 'HOST_STATS') {
+          ws.off('message', handleSimple);
+          const list = response.data[simpleMenusConfigs[menuId].prop] || [];
+          if (list.length === 0) return ctx.reply(`📝 *${simpleMenusConfigs[menuId].txt}:*\n\nهذه القائمة فارغة حالياً بالقرص.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+
+          const buttons = list.map(p => [Markup.button.callback(`${simpleMenusConfigs[menuId].btnTxt}: ${p}`, `${simpleMenusConfigs[menuId].prefix}${p}`)]);
+          buttons.push([Markup.button.callback('⬅️ عودة لقائمة التحكم', 'MENU_MAIN')]);
+          ctx.reply(`${simpleMenusConfigs[menuId].txt}:\n\nانقر لتنفيذ الإجراء الفوري حياً:`, { parse_mode: 'Markdown', ...Markup.inlineKeyboard(buttons) });
+        }
+      } catch (e) { }
+    };
+    ws.on('message', handleSimple);
+  });
 });
 
-bot.action('ACT_PLUGINS', (ctx) => {
+// تنفيذ أوامر فك الحظر أو سحب الرتب الفرعية الصادرة من أزرار الجداول الحية
+bot.action(/^(DEOP_TXT_|RM_WL_|PARDON_TXT_|PARDONIP_TXT_)(.+)$/, (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
-  ctx.answerCbQuery('🔌 جاري فحص الإضافات...');
-  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: 'plugins' } }));
-  ctx.reply('🔌 *[نظام الملفات]:* تم طلب قائمة الـ Plugins النشطة حالياً، متاح مراجعتها بالكامل عبر شاشة كونسل الويب.', { parse_mode: 'Markdown', ...backToMainKeyboard });
+  const actionType = ctx.match[1];
+  const target = ctx.match[2];
+  ctx.answerCbQuery();
+
+  let cmdPrefix = "";
+  if (actionType === 'DEOP_TXT_') cmdPrefix = "deop";
+  else if (actionType === 'RM_WL_') cmdPrefix = "whitelist remove";
+  else if (actionType === 'PARDON_TXT_') cmdPrefix = "pardon";
+  else if (actionType === 'PARDONIP_TXT_') cmdPrefix = "pardon-ip";
+
+  ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: `${cmdPrefix} ${target}` } }));
+  ctx.reply(`✅ *[نظام الإدارة]:* تم تنفيذ الإجراء بنجاح لـ \`${target}\` على القرص المضيف.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
-// استقبال الرسائل النصية المكتوبة كأوامر كونسل مباشرة
+// استقبال الرسائل النصية المفتوحة وتمريرها كأمر كونسل مباشر من الهاتف
 bot.on('text', (ctx) => {
   if (!isAdmin(ctx) || ctx.message.text.startsWith('/')) return;
   ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: ctx.message.text.trim() } }));
-  ctx.reply(`📥 *[الكونسل]:* تم تمرير الأمر المكتوب يدوياً للسيرفر الحي:\n\`${ctx.message.text.trim()}\``, { parse_mode: 'Markdown' });
+  ctx.reply(`📥 *[الكونسل الفوري]:* تم تمرير الأمر يدوياً للسيرفر الحي:\n\`${ctx.message.text.trim()}\``, { parse_mode: 'Markdown' });
 });
 
-bot.catch((err) => console.error('[Telegram Bot ERROR]:', err));
+bot.catch((err) => console.error('[Telegram Bot ERROR]: حدث خطأ غير متوقع:', err));
 
 bot.launch();
-console.log('[Telegram Bot]: يعمل بنجاح ومؤمن عبر القوائم الخمس الذكية ومربوط بالسوكيت المركزي المحدث وقراءة القرص الحية.');
+console.log('[Telegram Bot]: يعمل بنجاح ومؤمن عبر القوائم الخمس الفاخرة ومربوط بالسوكيت المركزي وقراءة القرص الحية.');

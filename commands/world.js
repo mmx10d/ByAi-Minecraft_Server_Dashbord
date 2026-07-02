@@ -1,16 +1,21 @@
+// ========================================================
+// ⚙️ [ملف world.js المطور - الجزء 1 من 2]
+// معالج التعديل الديناميكي وحفظ إعدادات سيرفر ماين كرافت
+// ========================================================
+
 const fs = require('fs');
 const path = require('path');
 const { executeCommand } = require('./server.js');
 
-// مسار ملف خصائص السيرفر الافتراضي
+// مسار ملف خصائص السيرفر الرئيسي
 const propertiesPath = path.join(__dirname, '../server.properties');
 
 /**
- * دالة مساعدة داخلية لقراءة وتحديث قيم محددة في ملف server.properties
+ * دالة مساعدة مركزية لقراءة وتحديث قيم محددة داخل ملف server.properties
  */
 function updateProperty(key, value) {
   if (!fs.existsSync(propertiesPath)) {
-    console.log('[World Manager]: ملف server.properties غير موجود بعد، يرجى تشغيل السيرفر مرة واحدة لتوليده.');
+    console.log('[سيرفر العالم]: ملف server.properties غير موجود بعد، يرجى تشغيل السيرفر مرة واحدة لتوليده.');
     return false;
   }
 
@@ -34,102 +39,148 @@ function updateProperty(key, value) {
     fs.writeFileSync(propertiesPath, updatedLines.join('\n'), 'utf8');
     return true;
   } catch (error) {
-    console.error(`[World Manager ERROR]: فشل تعديل الخاصية ${key}:`, error);
+    console.error(`[سيرفر العالم ERROR]: فشل تعديل الخاصية ${key}:`, error);
     return false;
   }
 }
 
 /**
- * دالة لتحديد الحد الأقصى للاعبين في السيرفر (يتطلب إعادة تشغيل لتطبيقه بالكامل)
- * @param {number} count - عدد اللاعبين الأقصى
+ * دالة ذكية لجلب كافة الإعدادات الحالية المتواجدة في ملف server.properties كـ JSON
+ */
+function getAllProperties() {
+  if (!fs.existsSync(propertiesPath)) return {};
+  const settings = {};
+  try {
+    const content = fs.readFileSync(propertiesPath, 'utf8');
+    const lines = content.split('\n');
+    lines.forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#') && trimmed.includes('=')) {
+        const parts = trimmed.split('=');
+        const key = parts[0].trim();
+        const value = parts.slice(1).join('=').trim();
+        settings[key] = value;
+      }
+    });
+  } catch (e) {
+    console.error('[سيرفر العالم ERROR]: فشل جلب الخصائص:', e);
+  }
+  return settings;
+}
+// ========================================================
+// ⚙️ [ملف world.js المطور - الجزء 2 من 2]
+// دوال تعديل الجيم مود، الصعوبة، الكراك، الوايت لست، والتصدير العام
+// ========================================================
+
+/**
+ * تعديل الحد الأقصى للاعبين في السيرفر
+ * @param {number} count - عدد اللاعبين
  */
 function setMaxPlayers(count) {
-  if (isNaN(count) || count < 0) {
-    console.log('[World Manager]: يرجى إدخال رقم صحيح لعدد اللاعبين.');
-    return;
-  }
+  if (isNaN(count) || count < 0) return false;
   if (updateProperty('max-players', count)) {
-    console.log(`[World Manager]: تم تعديل الحد الأقصى للاعبين إلى: ${count} (سيطبق بعد إعادة التشغيل).`);
+    console.log(`[سيرفر العالم]: تم تعديل الحد الأقصى للاعبين إلى: ${count} (يتطلب إعادة تشغيل).`);
+    return true;
   }
+  return false;
 }
 
 /**
- * دالة لتغيير وضع اللعب الافتراضي (Gamemode) وإرسال أمر فوري للسيرفر الحي
- * @param {string} mode - وضع اللعب (survival, creative, adventure, spectator)
+ * تغيير وضع اللعب الافتراضي (Gamemode) وإرسال أمر فوري
+ * @param {string} mode - (survival, creative, adventure, spectator)
  */
 function changeGamemode(mode) {
   const validModes = ['survival', 'creative', 'adventure', 'spectator'];
-  if (!validModes.includes(mode.toLowerCase())) {
-    console.log(`[World Manager]: وضع اللعب غير صالح. الخيارات المتاحة: ${validModes.join(', ')}`);
-    return;
-  }
+  if (!validModes.includes(mode.toLowerCase())) return false;
 
-  // تعديل الإعداد للمستقبل
   updateProperty('gamemode', mode.toLowerCase());
-  // تطبيق الأمر فورياً على السيرفر الحي
   executeCommand(`defaultgamemode ${mode.toLowerCase()}`);
-  console.log(`[World Manager]: تم تغيير وضع اللعب الافتراضي إلى: ${mode}`);
+  console.log(`[سيرفر العالم]: تم تغيير وضع اللعب الافتراضي إلى: ${mode}`);
+  return true;
 }
 
 /**
- * دالة للتحكم في السماح بدخول الحسابات المكركة (Offline Mode)
- * @param {boolean} state - true للأصلي فقط، false للسماح بالمكرك
+ * تغيير صعوبة اللعبة (Difficulty) وإرسال أمر فوري
+ * @param {string} difficulty - (peaceful, easy, normal, hard)
  */
-function setCrackAllowed(state) {
-  // في ماين كرافت online-mode=false تعني السماح بالمكرك
-  const onlineModeValue = state ? 'false' : 'true';
-  if (updateProperty('online-mode', onlineModeValue)) {
-    console.log(`[World Manager]: تم تعديل إعدادات الدخول المكرك إلى: ${state} (يتطلب إعادة تشغيل).`);
-  }
+function changeDifficulty(difficulty) {
+  const validLevels = ['peaceful', 'easy', 'normal', 'hard'];
+  if (!validLevels.includes(difficulty.toLowerCase())) return false;
+
+  updateProperty('difficulty', difficulty.toLowerCase());
+  executeCommand(`difficulty ${difficulty.toLowerCase()}`);
+  console.log(`[سيرفر العالم]: تم تغيير صعوبة السيرفر إلى: ${difficulty}`);
+  return true;
 }
 
 /**
- * دالة لحذف مجلد العالم الحالي لتوليد خريطة جديدة تماماً (يجب أن يكون السيرفر مطفأً)
+ * التحكم في السماح بدخول الحسابات المكركة (Online Mode)
+ * @param {boolean} allowed - true للسماح بالمكرك، false للأصلي فقط
+ */
+function setCrackAllowed(allowed) {
+  // في ماين كرافت online-mode=false تعني تفعيل الكراك (السماح بالدخول غير الأصلي)
+  const onlineModeValue = allowed ? 'false' : 'true';
+  if (updateProperty('online-mode', onlineModeValue)) {
+    console.log(`[سيرفر العالم]: تم تعديل إعدادات الدخول المكرك إلى: ${allowed} (يتطلب إعادة تشغيل).`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * التحكم في إجبار اللاعبين على وضع اللعبة الافتراضي عند الدخول
+ * @param {boolean} force - true للإجبار، false للمحافظة على وضعه السابق
+ */
+function setForceGamemode(force) {
+  const value = force ? 'true' : 'false';
+  if (updateProperty('force-gamemode', value)) {
+    console.log(`[سيرفر العالم]: تم تعديل إجبار وضع اللعبة إلى: ${force}`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * التحكم في تفعيل القائمة البيضاء (Whitelist) حياً
+ * @param {boolean} enable - true للتفعيل ومنع الغرباء، false للتعطيل
+ */
+function setWhitelistEnabled(enable) {
+  const value = enable ? 'true' : 'false';
+  if (updateProperty('white-list', value)) {
+    executeCommand(`whitelist ${enable ? 'on' : 'off'}`);
+    console.log(`[سيرفر العالم]: تم تعديل حالة القائمة البيضاء إلى: ${enable}`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * حذف مجلد العالم الحالي لتوليد خريطة جديدة تماماً (يجب أن يكون السيرفر مطفأً)
  */
 function deleteWorld() {
   const worldPath = path.join(__dirname, '../world');
-
   if (fs.existsSync(worldPath)) {
     try {
-      // حذف مجلد العالم بشكل تكراري آمن
       fs.rmSync(worldPath, { recursive: true, force: true });
-      console.log('[World Manager]: تم حذف مجلد العالم بنجاح. سيتم إنشاء عالم جديد عند التشغيل القادم.');
+      console.log('[سيرفر العالم]: تم حذف مجلد العالم بنجاح. سيتم إنشاء عالم جديد عند التشغيل القادم.');
+      return true;
     } catch (error) {
-      console.error('[World Manager ERROR]: فشل حذف العالم، تأكد من إطفاء السيرفر أولاً:', error);
-    }
-  } else {
-    console.log('[World Manager]: مجلد العالم غير موجود بالفعل.');
-  }
-}
-
-/**
- * دالة لتهيئة أو توليد عالم جديد (يمكن تمرير مسار مجلد عالم خارجي لاستبداله)
- * @param {string|null} worldSourcePath - مسار العالم الخارجي المراد وضعه (اختياري)
- */
-function generateNewWorld(worldSourcePath = null) {
-  // أولاً نقوم بحذف العالم القديم لتهيئة الساحة
-  deleteWorld();
-
-  if (worldSourcePath) {
-    const destPath = path.join(__dirname, '../world');
-    try {
-      if (fs.existsSync(worldSourcePath)) {
-        fs.cpSync(worldSourcePath, destPath, { recursive: true });
-        console.log('[World Manager]: تم نسخ واستيراد العالم الجديد بنجاح.');
-      } else {
-        console.log('[World Manager]: المسار الخارجي الممرر للعالم غير صحيح.');
-      }
-    } catch (error) {
-      console.error('[World Manager ERROR]: فشل استيراد العالم الخارجي:', error);
+      console.error('[سيرفر العالم ERROR]: فشل حذف العالم، تأكد من إطفاء السيرفر أولاً:', error);
+      return false;
     }
   }
+  return false;
 }
 
-// تصدير الدوال للاستخدام الخارجي
+// تصدير الدوال البرمجية المحدثة للإعدادات
 module.exports = {
+  updateProperty,
+  getAllProperties,
   setMaxPlayers,
   changeGamemode,
+  changeDifficulty,
   setCrackAllowed,
-  generateNewWorld,
+  setForceGamemode,
+  setWhitelistEnabled,
   deleteWorld
 };

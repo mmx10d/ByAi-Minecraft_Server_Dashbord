@@ -11,6 +11,7 @@
 !package-lock.json
 !paper.jar
 !README.md
+!nextupdate.txt
 
 # استثناء مجلد الأوامر وكل الملفات التي بداخله
 !commands/

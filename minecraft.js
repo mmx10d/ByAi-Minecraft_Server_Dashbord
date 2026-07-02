@@ -3,11 +3,10 @@ const playerManager = require('./commands/player.js');
 const worldManager = require('./commands/world.js');
 const infoManager = require('./commands/information.js');
 const hostManager = require('./commands/host.js');
-
-// الميزات الجديدة الشبيهة بـ Aternos
 const pluginManager = require('./commands/plugins.js');
 const backupManager = require('./commands/backup.js');
 const schedulerManager = require('./commands/scheduler.js');
+const fileManager = require('./commands/files.js'); // موديول الملفات الجديد
 
 module.exports = {
   server: serverManager,
@@ -17,5 +16,6 @@ module.exports = {
   host: hostManager,
   plugins: pluginManager,
   backup: backupManager,
-  scheduler: schedulerManager
+  scheduler: schedulerManager,
+  files: fileManager
 };

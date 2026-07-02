@@ -1,6 +1,6 @@
 <!-- ========================================================== -->
-<!-- 🎮 [ملف index.html المطور والمستقل - الجزء 1 من 2] -->
-<!-- هيكل اللوحة، ربط الـ CSS، وكروت الإحصائيات الفورية للموارد -->
+<!-- 🖥️ [ملف index.html المطور الفائق - الجزء 1 من 2] -->
+<!-- كروت الموارد، أزرار القدرة، ولوحة تعديل إعدادات السيرفر بالكامل -->
 <!-- ========================================================== -->
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -8,21 +8,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ لوحة الإدارة الاحترافية - خادم ماين كرافت</title>
-  <!-- استدعاء ملف التنسيق والألوان الخارجي والمنفصل تماماً -->
+  <title>⚡ لوحة الإدارة الاحترافية الفائقة - سيرفر ماين كرافت</title>
   <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
 
   <div class="wrapper">
-    <!-- الهيدر العلوي وعرض حالة خط اتصال السوكيت الرئيسي -->
     <header>
       <h1>⚡ لوحة الإدارة المتطورة</h1>
       <div class="server-badge" id="badgeStatus">جاري فحص حالة الاتصال...</div>
     </header>
 
-    <!-- شبكة كروت الإحصائيات الحية لقراءة موارد الجهاز والمضيف -->
+    <!-- كروت الإحصائيات الفورية والموارد الحية للمضيف -->
     <div class="stats-grid">
       <div class="stat-card status" id="cardStatus">
         <span class="stat-label">حالة السيرفر الحية</span>
@@ -42,71 +40,162 @@
       </div>
     </div>
 
-    <!-- أزرار التحكم السريع لإرسال الإجراءات التلقائية للنواة عبر السوكيت -->
+    <!-- صف أزرار التحكم بالقدرة والنسخ الاحتياطي الـ zip المباشر -->
     <div class="controls-row">
       <button class="btn btn-start" id="btnStart">▶ تشغيل السيرفر</button>
       <button class="btn btn-stop" id="btnStop">⏹ إيقاف آمن</button>
       <button class="btn btn-restart" id="btnRestart">🔄 إعادة تشغيل</button>
-      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث الموارد</button>
+      <button class="btn btn-backup" id="btnDownloadBackup">💾 تنزيل العالم الحالي (.zip)</button>
+      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث فوري للموارد</button>
+    </div>
+
+    <!-- ⚙️ لوحة إعدادات وخصائص السيرفر (Aternos Option Board) -->
+    <div class="full-panel-section">
+      <h3>⚙️ لوحة تعديل إعدادات وخصائص السيرفر الحية</h3>
+      <div class="options-settings-grid">
+        <div class="setting-opt-box">
+          <label>🎮 وضع اللعب الافتراضي (Gamemode):</label>
+          <select id="setGamemode" onchange="sendServerProperty('gamemode', this.value)">
+            <option value="survival">Survival (البقاء)</option>
+            <option value="creative">Creative (الإبداعي)</option>
+            <option value="adventure">Adventure (المغامرة)</option>
+            <option value="spectator">Spectator (المشاهد)</option>
+          </select>
+        </div>
+        <div class="setting-opt-box">
+          <label>☠️ صعوبة العالم (Difficulty):</label>
+          <select id="setDifficulty" onchange="sendServerProperty('difficulty', this.value)">
+            <option value="peaceful">Peaceful (سلمي)</option>
+            <option value="easy">Easy (سهل)</option>
+            <option value="normal">Normal (عادي)</option>
+            <option value="hard">Hard (صعب)</option>
+          </select>
+        </div>
+        <div class="setting-opt-box">
+          <label>🔓 السماح بالحسابات المكركة (Crack):</label>
+          <button class="toggle-btn" id="toggleCrack" onclick="toggleServerFeature('online-mode')">مفعل (مكرك)</button>
+        </div>
+        <div class="setting-opt-box">
+          <label>🛡️ تفعيل القائمة البيضاء (Whitelist):</label>
+          <button class="toggle-btn" id="toggleWhitelist" onclick="toggleServerFeature('white-list')">معطل</button>
+        </div>
+        <div class="setting-opt-box">
+          <label>👥 الحد الأقصى للاعبين (Max Players):</label>
+          <div style="display:flex; gap:5px;">
+            <input type="number" id="setMaxPlayersInput" value="20" style="width:80px; padding:5px;">
+            <button class="action-mini mini-op" onclick="saveMaxPlayersSetting()">حفظ</button>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- ========================================================== -->
-    <!-- 🎮 [ملف index.html المطور والمستقل - الجزء 2 من 2] -->
-    <!-- جداول الإدارة المتقدمة، صندوق الكونسل، واستدعاء محرك السكربت -->
+    <!-- 🖥️ [ملف index.html المطور الفائق - الجزء 2 من 2] -->
+    <!-- جداول اللاعبين، جرد الحساب (E)، متصفح ملفات العالم، واستدعاء السكربت -->
     <!-- ========================================================== -->
-    
-    <!-- الشبكة الإدارية المتقدمة لعرض القوائم الخمس الحية للاعبين -->
+
+    <!-- 👥 شبكة الجداول الخمسة لإدارة قوائم السيرفر واللاعبين حياً -->
     <div class="management-grid">
-      <!-- 1. قائمة اللاعبين أونلاين والتحكم التفاعلي -->
       <div class="manage-box">
         <h3>👥 المتصلون حالياً (<span id="countOnline">0</span>)</h3>
         <div class="list-container" id="listOnline"></div>
       </div>
-    
-      <!-- 2. قائمة المسؤولين والأدمنية -->
       <div class="manage-box">
-        <h3>👑 الأدمنية والمسؤولين (OP)</h3>
+        <h3>👑 المسؤولين (OP)</h3>
         <div class="list-container" id="listOps"></div>
       </div>
-    
-      <!-- 3. قائمة اللاعبين المسموح لهم بالدخول -->
       <div class="manage-box">
         <h3>🛡️ القائمة البيضاء (Whitelist)</h3>
         <div class="list-container" id="listWhitelist"></div>
       </div>
-    
-      <!-- 4. قائمة اللاعبين المحظورين -->
       <div class="manage-box">
-        <h3>🚫 اللاعبين المحظورين (Banned)</h3>
+        <h3>🚫 المحظورين (Banned)</h3>
         <div class="list-container" id="listBanned"></div>
       </div>
-    
-      <!-- 5. قائمة الآي بي المحظور -->
       <div class="manage-box">
         <h3>📟 الآي بي المحظور (Banned IPs)</h3>
         <div class="list-container" id="listBannedIps"></div>
       </div>
     </div>
-    
+
+    <!-- 📦 لوحة كشف بيانات وجرد اللاعب المتقدمة (Inventory Style - E View) -->
+    <div class="full-panel-section id=" playerAdvancedView" style="display:none;">
+      <div class="inventory-header">
+        <h3>🧰 نافذة جرد وبيانات الحساب المتقدمة: <span id="advPlayerName" style="color:var(--accent-blue);">---</span>
+        </h3>
+        <button class="action-mini mini-kick" onclick="closePlayerInventory()">❌ إغلاق النافذة</button>
+      </div>
+      <div class="inventory-grid">
+        <div class="inv-slot"><span class="inv-label">🆔 الـ UUID الرقمي:</span> <span id="invUuid"
+            class="inv-val">---</span></div>
+        <div class="inv-slot"><span class="inv-label">⏱️ إجمالي وقت اللعب:</span> <span id="invPlayTime"
+            class="inv-val">---</span></div>
+        <div class="inv-slot"><span class="inv-label">💀 عدد مرات الموت:</span> <span id="invDeaths"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🦘 إجمالي القفزات:</span> <span id="invJumps"
+            class="inv-val">0</span>
+        </div>
+        <div class="inv-slot"><span class="inv-label">⚔️ قتلى اللاعبين:</span> <span id="invPlayerKills"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🏹 قتلى الوحوش:</span> <span id="invMobKills"
+            class="inv-val">0</span>
+        </div>
+        <div class="inv-slot"><span class="inv-label">🏆 الإنجازات المفتوحة (Advancements):</span> <span
+            id="invAdvancements" class="inv-val">0</span></div>
+      </div>
+    </div>
+
+    <!-- 📁 لوحة متصفح ومدير ملفات العالم وسيرفر ماين كرافت بالكامل (Aternos File Manager) -->
+    <div class="full-panel-section">
+      <div class="file-manager-header">
+        <h3>📁 مدير ومتصفح ملفات العالم والسيرفر</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span id="currentPathDisplay" style="color:var(--text-muted); font-family:monospace; font-size:13px;">المجلد
+            الرئيسي /</span>
+          <button class="action-mini mini-unban" onclick="browseFolder('')" title="العودة للمجلد الرئيسي">🏠
+            الرئيسي</button>
+          <button class="action-mini mini-unban" onclick="goBackFolder()" title="المجلد الأعلى">⬆️ للأعلى</button>
+          <label class="action-mini mini-op" style="cursor:pointer;" title="رفع ملف لهذا المجلد">
+            📥 رفع ملف <input type="file" id="fileUploadInput" onchange="handleFileUpload(this)" style="display:none;">
+          </label>
+        </div>
+      </div>
+      <!-- جدول عرض الملفات الحية -->
+      <div class="file-browser-container" id="fileBrowserList">
+        <!-- الملفات والمجلدات ستحقن هنا برمجياً -->
+      </div>
+    </div>
+
+    <!-- 📝 نافذة محرر النصوص السحابي لتعديل ملفات التكوين (File Content Editor) -->
+    <div class="full-panel-section" id="fileEditorSection" style="display:none;">
+      <div class="inventory-header">
+        <h3>📝 محرر النصوص السحابي للملف: <span id="editingFileName" style="color:var(--accent-green);">---</span></h3>
+        <div>
+          <button class="action-mini mini-op" onclick="saveEditingFile()">💾 حفظ التعديلات</button>
+          <button class="action-mini mini-kick" onclick="closeFileEditor()">❌ إلغاء</button>
+        </div>
+      </div>
+      <textarea id="fileEditorTextArea" rows="15"
+        style="width:100%; background:var(--bg-darker); border:1px solid var(--border-color); color:#fff; font-family:monospace; padding:15px; outline:none; border-radius:6px; font-size:13px; resize:vertical; line-height:1.5; margin-top:10px;"></textarea>
+    </div>
+
     <!-- صندوق حاوية الكونسل الاحترافي وشريط تنفيذ الأوامر السفلي -->
     <div class="console-container">
       <div class="console-header">
         <span>شاشة الكونسل ومخرجات السيرفر الحية</span>
         <span id="socketIndicator">WebSocket: جاري الاتصال...</span>
       </div>
-      <div class="console-screen" id="consoleScreen">
-        <!-- جافا سكريبت ستحقن الأسطر الملونة هنا تلقائياً -->
-      </div>
+      <div class="console-screen" id="consoleScreen"></div>
       <div class="console-input-wrapper">
         <span>&gt;</span>
         <input type="text" id="cmdInput" class="console-input"
-          placeholder="اكتب أمر الخادم هنا واضغط Enter للخط المباشر...">
+          placeholder="اكتب أمر السيرفر هنا واضغط Enter للخط المباشر...">
         <button class="btn-send" id="btnSend">تنفيذ</button>
       </div>
     </div>
-    </div>
-    
-    <!-- استدعاء محرك السوكيت التفاعلي المحدث لربط اللوحة بالنواة وقراءة ملفات الـ JSON -->
-    <script src="script.js"></script>
-    </body>
-    
-    </html>
+  </div>
+
+  <!-- استدعاء محرك السوكيت التفاعلي المطور كلياً والمستقل لإدارة الأحداث بالكامل -->
+  <script src="script.js"></script>
+</body>
+
+</html>
