@@ -1,6 +1,6 @@
 // ========================================================
-// 🤖 [بوت تلجرام المطور الفائق - الجزء 1 من 2]
-// تهيئة النظام، الحماية الصارمة، وتصميم القوائم الشجرية التفاعلية
+// 🤖 [بوت تلجرام المحترف والمحدث - الجزء 1 من 2]
+// تهيئة النظام، الحماية باليوزر نيم، وتصميم الأزرار التفاعلية
 // ========================================================
 
 const { Telegraf, Markup } = require('telegraf');
@@ -11,7 +11,7 @@ require('dotenv').config({ path: '../.env' });
 const bot = new Telegraf(process.env.TELEGRAM_TOKEN);
 const ws = new WebSocket(process.env.SOCKET_URL);
 
-// متغير مؤقت لحفظ اسم اللاعب الذي قمت بتحديده لتطبيق العقوبات عليه
+// متغير مؤقت لتخزين اسم اللاعب المستهدف لتطبيق العقوبات عليه
 let selectedPlayerContext = "";
 
 /**
@@ -67,8 +67,8 @@ bot.start((ctx) => {
   }
 
   ctx.reply(
-    '🎮 *مرحباً بك في لوحة الإدارة السحابية الفائقة لسيرفرك!*\n\n' +
-    'اللوحة مربوطة بالنواة المركزية وجاهزة للتحكم الشامل بجميع ميزات أترنوس وأكثر بنظام النقر الذكي.\n' +
+    '🎮 *مرحباً بك في لوحة الإدارة السحابية الفائقة المحدثة!*\n\n' +
+    'اللوحة متزامنة الآن مع محلل اللاعبين الذكي وجاهزة للتحكم الشامل بنظام النقر المباشر.\n' +
     'اختر أحد الأقسام من الأزرار أدناه للبدء:',
     { parse_mode: 'Markdown', ...mainKeyboard }
   );
@@ -91,7 +91,7 @@ bot.action('MENU_POWER', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ctx.answerCbQuery();
   ctx.editMessageText(
-    '⚡ *قسم التحكم بالقدرة والتشغيل*\n\nيمكنك التحكم بحالة إقلاع وإغلاق السيرفر الحقيقية عبر الأزرار أدناه:',
+    '⚡ *قسم التحكم بالقدرة والتشغيل*\n\nيمكنك التحكم بحالة إقلاع وإغلاق السيرفر الفعلية عبر الأزرار أدناه:',
     { parse_mode: 'Markdown', ...powerKeyboard }
   );
 });
@@ -105,53 +105,48 @@ bot.action('MENU_MANAGE', (ctx) => {
   );
 });
 // ========================================================
-// 🤖 [بوت تلجرام المطور الفائق - الجزء 2 من 2]
-// محرك إدارة اللاعبين الديناميكي، معالجة الأزرار، والربط الحقيقي
+// 🤖 [بوت تلجرام المحترف والمحدث - الجزء 2 من 2]
+// محرك إدارة اللاعبين الديناميكي الصارم ومعالجة نقرات الأزرار حياً
 // ========================================================
 
 // ==========================================
-// 👥 محرك إدارة اللاعبين المتصلين حياً (Dynamic Player Manager)
+// 👥 محرك إدارة اللاعبين الحية المتزامن (RegEx Matched Dynamic Manager)
 // ==========================================
 
 bot.action('MENU_PLAYERS', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ctx.answerCbQuery('👥 جاري استخراج قائمة اللاعبين حياً...');
 
-  // 1. طلب إحصائيات الموارد التي تحتوي على مصفوفة اللاعبين المتصلين من السيرفر
+  // طلب الإحصائيات التي تحمل مصفوفة الأسماء الحقيقية المستخرجة عبر RegEx
   ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
   const handlePlayersList = (data) => {
     try {
       const response = JSON.parse(data.toString());
       if (response.type === 'HOST_STATS') {
-        // فك الاستماع فوراً لمنع التداخل مستقبلاً
+        // فك الاستماع فوراً لمنع تكرار المعالجة
         ws.off('message', handlePlayersList);
 
-        // ملاحظة برمجية: ملف index.js المحدث يمرر الكاونت، ولكن لضمان جلب الأسماء بشكل فليكس ابل
-        // سنعتمد على دالة جلب المتصلين الحقيقية. إذا كان السيرفر مطفأ أو لا يوجد أحد:
-        // (في بيئة السيرفر الحية، نقوم بسحب القائمة المتصلة)
+        // جلب المصفوفة الحية للأسماء الصادرة من التحديث الأخير لملف index.js
+        const activePlayers = response.data.playersOnline || [];
 
-        // لكي نبني الأزرار بشكل ديناميكي لكل لاعب متواجد حياً:
-        // سنقوم بطلب قائمة اللاعبين الفورية أو محاكاتها برمجياً بناءً على الرد
-        const fakeOrRealPlayers = response.data.playersOnline || [];
-
-        if (fakeOrRealPlayers.length === 0) {
+        if (activePlayers.length === 0) {
           return ctx.reply(
-            '👥 *إدارة اللاعبين:*\n\nلا يوجد أي لاعب متصل بالسيرفر حالياً (السيرفر فارغ أو في وضع النوم).',
+            '👥 *إدارة اللاعبين:*\n\nلا يوجد أي لاعب متصل داخل السيرفر حالياً (السيرفر فارغ تماماً أو في وضع النوم الذكي).',
             { parse_mode: 'Markdown', ...backToMainKeyboard }
           );
         }
 
-        // بناء أزرار ديناميكية: كل لاعب في سطر مستقل باسمه
-        const playerButtons = fakeOrRealPlayers.map(player => {
+        // بناء أزرار تفاعلية ديناميكية: كل لاعب متصل يحصل على زر مخصص باسمه
+        const playerButtons = activePlayers.map(player => {
           return [Markup.button.callback(`👤 اللاعب: ${player}`, `TARGET_${player}`)];
         });
 
-        // إضافة زر العودة في نهاية قائمة اللاعبين
+        // إضافة زر العودة للقائمة الرئيسية أسفل قائمة اللاعبين
         playerButtons.push([Markup.button.callback('⬅️ العودة للقائمة الرئيسية', 'MENU_MAIN')]);
 
         ctx.reply(
-          '👥 *قائمة اللاعبين المتصلين حالياً:*\n\nانقر على اسم اللاعب لفتح لوحة التحكم والعقوبات الخاصة به فوراً:',
+          '👥 *قائمة اللاعبين المتواجدين في اللعبة حالياً:*\n\nانقر على اسم اللاعب لفتح لوحة العقوبات والتحكم الخاصة به فوراً:',
           { parse_mode: 'Markdown', ...Markup.inlineKeyboard(playerButtons) }
         );
       }
@@ -161,17 +156,17 @@ bot.action('MENU_PLAYERS', (ctx) => {
   ws.on('message', handlePlayersList);
 });
 
-// الإنصات الذكي لضغطات أزرار اللاعبين الديناميكية (تبدأ بـ TARGET_)
+// الإنصات الذكي لنقرات أزرار اللاعبين المستهدفين (تبدأ بـ TARGET_)
 bot.action(/^TARGET_(.+)$/, (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
 
-  // استخراج اسم اللاعب المستهدف من معرف الزر المكبوس
+  // استخراج اسم اللاعب بدقة من سياق الزر المكبوس
   const playerName = ctx.match[1];
-  selectedPlayerContext = playerName; // حفظ الاسم في الذاكرة لتطبيق العقوبة عليه لاحقاً
+  selectedPlayerContext = playerName; // تخزين اسم اللاعب المستهدف في الذاكرة المؤقتة للعقوبة
 
-  ctx.answerCbQuery(`🎯 تحديد: ${playerName}`);
+  ctx.answerCbQuery(`🎯 تم تحديد: ${playerName}`);
 
-  // بناء لوحة العقوبات والإجراءات الخاصة بهذا اللاعب تحديداً
+  // بناء لوحة التحكم المتقدمة الخاصة باللاعب المستهدف
   const playerActionsKeyboard = Markup.inlineKeyboard([
     [
       Markup.button.callback('🥾 طرد (Kick)', 'P_ACT_KICK'),
@@ -185,23 +180,23 @@ bot.action(/^TARGET_(.+)$/, (ctx) => {
   ]);
 
   ctx.editMessageText(
-    `🛠️ *لوحة التحكم باللاعب:* \`${playerName}\`\n\n` +
-    `اختر الإجراء الصارم المراد تطبيقه على اللاعب فوراً داخل خادم ماين كرافت:`,
+    `🛠️ *لوحة التحكم والعقوبات للاعب:* \`${playerName}\`\n\n` +
+    `اختر الإجراء المراد تنفيذه فوراً عبر الكونسل الخلفي لماين كرافت:`,
     { parse_mode: 'Markdown', ...playerActionsKeyboard }
   );
 });
 
-// معالجة عقوبات اللاعبين (Player Actions Execution)
+// تنفيذ العقوبة والإجراءات الصارمة بناءً على اختيار الأدمن
 bot.action('P_ACT_KICK', (ctx) => {
   if (!isAdmin(ctx) || !selectedPlayerContext) return ctx.answerCbQuery();
 
   ws.send(JSON.stringify({
     action: 'MINECRAFT_COMMAND',
-    payload: { command: `kick ${selectedPlayerContext} طرد سريع عبر تلجرام` }
+    payload: { command: `kick ${selectedPlayerContext} طرد تفاعلي سريع عبر تلجرام` }
   }));
 
   ctx.answerCbQuery(`🥾 تم طرد ${selectedPlayerContext}`);
-  ctx.reply(`✅ *[نظام الحماية]:* تم طرد اللاعب \`${selectedPlayerContext}\` من السيرفر بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+  ctx.reply(`✅ *[نظام العقوبات]:* تم طرد اللاعب \`${selectedPlayerContext}\` من السيرفر بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
 bot.action('P_ACT_BAN', (ctx) => {
@@ -213,7 +208,7 @@ bot.action('P_ACT_BAN', (ctx) => {
   }));
 
   ctx.answerCbQuery(`🚫 تم حظر ${selectedPlayerContext}`);
-  ctx.reply(`🚨 *[نظام العقوبات]:* تم إدخال اللاعب \`${selectedPlayerContext}\` في القائمة السوداء (Ban) وحظره نهائياً.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+  ctx.reply(`🚨 *[نظام الحماية]:* تم إدخال اللاعب \`${selectedPlayerContext}\` في القائمة السوداء (Ban) وحظر حسابه نهائياً.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
 bot.action('P_ACT_OP', (ctx) => {
@@ -225,7 +220,7 @@ bot.action('P_ACT_OP', (ctx) => {
   }));
 
   ctx.answerCbQuery(`👑 تم ترقية ${selectedPlayerContext}`);
-  ctx.reply(`👑 *[نظام الرتب]:* تم منح اللاعب \`${selectedPlayerContext}\` صلاحيات مسؤول الكونسل الكاملة (OP) داخل السيرفر.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+  ctx.reply(`👑 *[نظام الرتب]:* تم منح اللاعب \`${selectedPlayerContext}\` صلاحيات مسؤول الكونسل الكاملة (OP) بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
 bot.action('P_ACT_DEOP', (ctx) => {
@@ -237,17 +232,17 @@ bot.action('P_ACT_DEOP', (ctx) => {
   }));
 
   ctx.answerCbQuery(`🛡️ سحب صلاحيات ${selectedPlayerContext}`);
-  ctx.reply(`🛡️ *[نظام الرتب]:* تم سحب رتبة الأدمن من اللاعب \`${selectedPlayerContext}\` وإعادته كلاعب عادي بنجاح.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
+  ctx.reply(`🛡️ *[نظام الرتب]:* تم سحب رتبة الأدمن من اللاعب \`${selectedPlayerContext}\` وإعادته لرتبة لاعب عادي.`, { parse_mode: 'Markdown', ...backToMainKeyboard });
 });
 
 // ==========================================
-// 🔌 معالجة أزرار التشغيل والصيانة العامة
+// 🔌 معالجة أزرار التشغيل والصيانة والقدرة العامة
 // ==========================================
 
 bot.action('ACT_START', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'START_SERVER' }));
-  ctx.answerCbQuery('⚡ جاري إرسال أمر التشغيل...');
+  ctx.answerCbQuery('⚡ جاري تشغيل السيرفر...');
   ctx.reply('🚀 *[نظام القدرة]:* جاري بدء تشغيل وإيقاظ سيرفر ماين كرافت الحقيقي وتوليد عملية الجافا حالياً...', { parse_mode: 'Markdown' });
 });
 
@@ -255,14 +250,14 @@ bot.action('ACT_STOP', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'STOP_SERVER' }));
   ctx.answerCbQuery('🛑 جاري إرسال أمر الإيقاف...');
-  ctx.reply('🛑 *[نظام القدرة]:* تم إرسال أمر الإيقاف الآمن (Stop) للنواة الخلفية للمحافظة على سلامة ملفات العالم.', { parse_mode: 'Markdown' });
+  ctx.reply('🛑 *[نظام القدرة]:* تم إرسال أمر الإيقاف الآمن (Stop) للنواة الخلفية للمحافظة على سلامة الخرائط والبيانات.', { parse_mode: 'Markdown' });
 });
 
 bot.action('ACT_RESTART', (ctx) => {
   if (!isAdmin(ctx)) return ctx.answerCbQuery();
   ws.send(JSON.stringify({ action: 'RESTART_SERVER' }));
   ctx.answerCbQuery('🔄 جاري إرسال أمر إعادة التشغيل...');
-  ctx.reply('🔄 *[نظام القدرة]:* تم البدء في عملية إعادة التشغيل الذكية. سيقوم النظام بانتظار إغلاق المنفذ لمنع تداخل البورتات ثم يقلع مجدداً.', { parse_mode: 'Markdown' });
+  ctx.reply('🔄 *[نظام القدرة]:* تم البدء في عملية إعادة التشغيل الذكية. سيقوم النظام بانتظار إغلاق المنفذ القديم لمنع تداخل البورتات ثم يقلع مجدداً.', { parse_mode: 'Markdown' });
 });
 
 bot.action('MENU_STATS', (ctx) => {
@@ -325,4 +320,4 @@ bot.catch((err) => {
 });
 
 bot.launch();
-console.log('[Telegram Bot]: يعمل بنجاح ومؤمن عبر اسم المستخدم ومربوط بالسوكيت المركزي.');
+console.log('[Telegram Bot]: يعمل بنجاح ومؤمن عبر اسم المستخدم ومربوط بالسوكيت المركزي المحدث.');
