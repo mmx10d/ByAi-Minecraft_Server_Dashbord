@@ -1,13 +1,13 @@
 // ========================================================
-// 👾 [بوت ديسكورد المطور المصلح - الجزء 1 من 4]
-// تهيئة الصلاحيات، اتصال السوكيت، وتصميم مجموعات الأزرار الشجرية
+// 👾 [بوت ديسكورد المطور المصلح - الجزء 1 من 5]
+// استيراد الحزم الحديثة، تأمين الصلاحيات، وتصميم صفوف الأزرار الشجرية
 // ========================================================
 
-const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { Client, GatewayIntentBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, REST, Routes, SlashCommandBuilder, MessageFlags } = require('discord.js');
 const WebSocket = require('ws');
 require('dotenv').config({ path: '../.env' });
 
-// تهيئة البوت بالصلاحيات الأمنية الكاملة المتوافقة مع السلاش كوماند وبوابات ديسكورد
+// تهيئة البوت بالصلاحيات الأمنية الكاملة المتوافقة مع السلاش كوماند وبوابات ديسكورد الحديثة
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -20,7 +20,7 @@ const client = new Client({
 // الاتصال المباشر بخادم السوكيت المركزي للنواة الخلفية للمشروع (ws://localhost:8080)
 const ws = new WebSocket(process.env.SOCKET_URL);
 
-// متغيرات الذاكرة المؤقتة لحفظ أسماء اللاعبين ومسارات الملفات وفحص مجلد الإضافات
+// متغيرات الذاكرة المؤقتة لحفظ مسارات التصفح الحالية وأسماء اللاعبين المستهدفين للعقوبات
 let selectedPlayerContext = "";
 let currentDiscordRelativePath = "";
 let isDiscPluginAreaActive = false; // فحص هل يتصفح مجلد العالم أم مجلد الإضافات
@@ -64,7 +64,7 @@ function createPowerRow() {
   );
 }
 
-// 3. تبويب الاختيار المعزول حديدياً لإدارة المجلدات (العالم أو البلقنز)
+// 3. تبويب الاختيار المعزول حديدياً لإدارة المجلدات (world أو plugins حصراً)
 function createChooseFileAreaRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder().setCustomId('DISC_GO_WORLD_AREA').setLabel('🗺️ ملفات العالم (World)').setStyle(ButtonStyle.Primary),
@@ -80,19 +80,19 @@ function createBackToMainRow() {
   );
 }
 // ========================================================
-// 👾 [بوت ديسكورد المطور المصلح - الجزء 2 من 4]
-// تسجيل الأوامر، بث اللوجز المنفصلة، ومستمع الكوماند /panel
+// 👾 [Hardened Discord Bot Shell - Part 2 of 5]
+// REST Command Registry, Live Channel Logging, & Slashing
 // ========================================================
 
-// 1. تعريف الكوماند المائل المدمج مع الشرح التوضيحي المكتوب للمستخدم
+// 1. Definition template array for the master deployment slash command
 const commands = [
   new SlashCommandBuilder()
     .setName('panel')
     .setDescription('🛠️ فتح لوحة التحكم التفاعلية الكبرى لإدارة سيرفر ماين كرافت واللاعبين والملفات')
 ].map(command => command.toJSON());
 
-// 2. محرك التسجيل الآلي للأوامر وبث السجلات للروم المنفصلة
-client.once('ready', async () => {
+// 2. Hardened automated REST payload injection using the updated event hook
+client.once('clientReady', async () => {
   console.log(`[Discord Bot]: تم تسجيل الدخول بسلام باسم ${client.user.tag}`);
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
@@ -107,7 +107,7 @@ client.once('ready', async () => {
     console.error('[Discord API ERROR]: فشل تسجيل الأوامر المائلة:', error);
   }
 
-  // بث السجلات الحية القادمة من السوكيت إلى روم اللوجز المنفصلة حصرياً (LOGS CHANNEL)
+  // Direct live streaming pipeline pumping backend strings into the dedicated log channel
   ws.on('message', (message) => {
     try {
       const response = JSON.parse(message.toString());
@@ -121,16 +121,16 @@ client.once('ready', async () => {
   });
 });
 
-// 3. الاستماع لـتنفيذ السلاش كوماند وإطلاق اللوحة الرسومية الفاخرة بالـ Embed
+// 3. Command deployment interceptor utilizing modern ephemeral flagging rules
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === 'panel') {
-    // حماية الغرفة: التأكد من أن المستخدم يكتب الأمر داخل روم الأوامر المحددة فقط
+    // Enforcing room isolation so control blocks never spam public general lobbies
     if (interaction.channelId !== process.env.DISCORD_COMMANDS_CHANNEL_ID) {
       return interaction.reply({
         content: `❌ يرجى استخدام هذا الأمر داخل روم التحكم والأوامر المخصصة فقط: <#${process.env.DISCORD_COMMANDS_CHANNEL_ID}>`,
-        ephemeral: true
+        flags: [MessageFlags.Ephemeral]
       });
     }
 
@@ -147,7 +147,7 @@ client.on('interactionCreate', async (interaction) => {
   }
 });
 
-// 4. دالة مساعدة لتوليد صفوف إعدادات السيرفر مدعومة بـ إيموجيات المزامنة الحية (✅ / ❌)
+// 4. Global configurations view renderer dynamically loading setting properties
 function renderSettingsRows(props) {
   const crackIcon = props['online-mode'] === 'false' ? '✅ مفعل (مكرك)' : '❌ معطل (أصلي)';
   const wlIcon = props['white-list'] === 'true' ? '✅ مفعلة' : '❌ معطلة';
@@ -168,8 +168,8 @@ function renderSettingsRows(props) {
   return [settingsRow1, settingsRow2];
 }
 // ========================================================
-// 👾 [بوت ديسكورد المطور المصلح - الجزء 3 من 4]
-// مستمع نقرات الأزرار، التحكم بالقدرة، وفحص الموارد الحية الحقيقية المعززة
+// 👾 [Hardened Discord Bot Shell - Part 3 of 5]
+// Core Interaction Receivers, Power Management & Live Analytics
 // ========================================================
 
 client.on('interactionCreate', async (interaction) => {
@@ -177,10 +177,10 @@ client.on('interactionCreate', async (interaction) => {
 
   const customId = interaction.customId;
 
-  // تمديد الوقت الفوري لتفادي رسالة عدم استجابة التطبيق البوت
-  await interaction.deferReply({ ephemeral: true }).catch(() => { });
+  // Immediately trigger conversational buffering to stop timeout error states
+  await interaction.deferReply({ flags: [MessageFlags.Ephemeral] }).catch(() => { });
 
-  // أ) محرك التنقل الشجري وتحديث الواجهات الرسومية حياً
+  // A) Master Tree structural navigation routing triggers
   if (customId === 'DISC_NAV_MAIN') {
     return interaction.editReply({ content: '🎮 تم الانتقال للقائمة الرئيسية العظمى حياً:', components: [createMainRow1(), createMainRow2(), createMainRow3()] });
   }
@@ -202,7 +202,7 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
-  // ب) معالجة خيارات إعدادات السيرفر الفورية (الجيم مود والصعوبة)
+  // B) Real-time Property modifiers (Gamemode and Difficulty adjustments)
   if (customId.startsWith('DISC_OPT_GM_')) {
     const mode = customId.replace('DISC_OPT_GM_', '').toLowerCase();
     ws.send(JSON.stringify({ action: 'SET_GAMEMODE_SETTING', payload: { mode } }));
@@ -214,7 +214,7 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.editReply(`✅ *[إعدادات السيرفر]:* تم تحديث صعوبة العالم حياً إلى: \`${difficulty}\``);
   }
 
-  // ج) معالجة أزرار التبديل الدائرية لوضع الكراك والوايت لست
+  // C) Interactive Switch toggles handling Online-Mode (Crack) and Whitelist values
   if (customId === 'DISC_OPT_TOGGLE_CRACK' || customId === 'DISC_OPT_TOGGLE_WL') {
     ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
@@ -237,7 +237,7 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
-  // د) معالجة أزرار القدرة العامة للسيرفر الخلفي (Power Actions)
+  // D) Absolute execution signals managing Java runtime state configurations
   if (customId === 'DISC_ACT_START') {
     ws.send(JSON.stringify({ action: 'START_SERVER' }));
     return interaction.editReply('🚀 *[نظام القدرة]:* جاري بدء تشغيل وإيقاظ السيرفر وتوليد عملية الجافا بالخلفية...');
@@ -251,7 +251,7 @@ client.on('interactionCreate', async (interaction) => {
     return interaction.editReply('🔄 *[نظام القدرة]:* تم البدء في عملية إعادة التشغيل الذكية لإنعاش ملفات المنفذ.');
   }
 
-  // هـ) زر فحص الموارد الحية الشامل (المعالج مصلح ومضمون 100%)
+  // E) High-grade diagnostic polling retrieving fixed real-time computational data
   if (customId === 'DISC_NAV_STATS') {
     ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
@@ -278,13 +278,97 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
   // ========================================================
-  // 👾 [بوت ديسكورد المطور المصلح - الجزء 4 من 5]
-  // قائمة التحكم بالملفات، تصفح المجلدات، ومحرك إرسال الـ zip للديسكورد
+  // 👾 [Hardened Discord Bot Shell - Part 4 of 5]
+  // Sandboxed File Explorer Sheets & Binary Action Anchors
   // ========================================================
 
-  // ح) خيارات التحكم بالملف المنفرد (حذف وتحميل باينري)
-  const buttonClickId = interaction.customId;
+  // F) Building live list buttons for simple database sets (OP, Whitelist, Bans)
+  if (customId === 'DISC_NAV_PLAYERS' || customId === 'DISC_NAV_BANLIST' || customId === 'DISC_NAV_OPS' || customId === 'DISC_NAV_WL' || customId === 'DISC_NAV_IPLIST') {
+    ws.send(JSON.stringify({ action: 'GET_HOST_STATS' }));
 
+    const handleListRequest = (data) => {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'HOST_STATS') {
+        ws.off('message', handleListRequest);
+
+        let activeList = [];
+        let actionPrefix = "";
+        let titleText = "";
+
+        if (customId === 'DISC_NAV_PLAYERS') { activeList = response.data.playersOnline || []; actionPrefix = 'D_PL_'; titleText = '👥 إدارة المتصلين حالياً'; }
+        else if (customId === 'DISC_NAV_BANLIST') { activeList = response.data.bannedPlayersList || []; actionPrefix = 'D_UNBAN_'; titleText = '🚫 إدارة المحظورين (Pardon)'; }
+        else if (customId === 'DISC_NAV_OPS') { activeList = response.data.opsList || []; actionPrefix = 'D_DEOP_'; titleText = '👑 إدارة المسؤولين (De-OP)'; }
+        else if (customId === 'DISC_NAV_WL') { activeList = response.data.whitelistList || []; actionPrefix = 'D_RMWL_'; titleText = '🛡️ إدارة القائمة البيضاء'; }
+        else if (customId === 'DISC_NAV_IPLIST') { activeList = response.data.bannedIpsList || []; actionPrefix = 'D_UNIP_'; titleText = '📟 إدارة الآي بي المحظور'; }
+
+        if (activeList.length === 0) {
+          return interaction.editReply({ content: `❌ *[نظام الملفات]:* قسم \`${titleText}\` فارغ حالياً في سجلات السيرفر.`, components: [createBackToMainRow()] });
+        }
+
+        const dynamicRows = [];
+        let currentRow = new ActionRowBuilder();
+
+        activeList.slice(0, 20).forEach((name, index) => {
+          if (index > 0 && index % 4 === 0) { dynamicRows.push(currentRow); currentRow = new ActionRowBuilder(); }
+          currentRow.addComponents(new ButtonBuilder().setCustomId(`${actionPrefix}${name.slice(0, 30)}`).setLabel(`👤 ${name}`).setStyle(ButtonStyle.Secondary));
+        });
+        dynamicRows.push(currentRow);
+        dynamicRows.push(createBackToMainRow());
+
+        interaction.editReply({ content: `⚙️ **لوحة القسم الموحد:** \`${titleText}\`\n\nانقر على اسم الحساب المستهدف مباشرة لتطبيق الإجراء التلقائي:`, components: dynamicRows });
+      }
+    };
+    ws.on('message', handleListRequest);
+    return;
+  }
+
+  // G) Traveral routes controlling explicit sandbox zone separation
+  if (customId === 'DISC_NAV_CHOOSE_FILES') {
+    return interaction.editReply({ content: '📁 **مدير ملفات السيرفر المعزول حديدياً:**\nاختر مجلد العمل المصرح بلمسه للتصفح والرفع والحذف بأمان:', components: [createChooseFileAreaRow()] });
+  }
+
+  if (customId === 'DISC_GO_WORLD_AREA') { isDiscPluginAreaActive = false; currentDiscordRelativePath = ""; return requestDiscordBrowseFolder(interaction, ""); }
+  if (customId === 'DISC_GO_PLUGINS_AREA') { isDiscPluginAreaActive = true; currentDiscordRelativePath = ""; return requestDiscordBrowseFolder(interaction, ""); }
+
+  if (customId.startsWith('D_OPEN_DIR_')) {
+    const targetPath = customId.replace('D_OPEN_DIR_', '');
+    return requestDiscordBrowseFolder(interaction, targetPath);
+  }
+
+  // Programmatic file browser injector pulling live node trees over websocket
+  function requestDiscordBrowseFolder(inter, targetPath) {
+    currentDiscordRelativePath = targetPath;
+    ws.send(JSON.stringify({ action: 'BROWSE_SERVER_DIRECTORY', payload: { relativePath: targetPath, isPluginArea: isDiscPluginAreaActive } }));
+
+    const handleFilesRequest = (data) => {
+      const response = JSON.parse(data.toString());
+      if (response.type === 'DIRECTORY_ITEMS_DATA' && response.currentPath === targetPath) {
+        ws.off('message', handleFilesRequest);
+        const items = response.items || [];
+        const prefix = isDiscPluginAreaActive ? "/plugins" : "/world";
+
+        if (items.length === 0) return inter.editReply({ content: `📁 *مدير الملفات:* المجلد [\`${prefix}/${targetPath}\`] فارغ تماماً.`, components: [createBackToMainRow()] });
+
+        const dynamicRows = [];
+        let currentRow = new ActionRowBuilder();
+
+        items.slice(0, 16).forEach((item, index) => {
+          if (index > 0 && index % 4 === 0) { dynamicRows.push(currentRow); currentRow = new ActionRowBuilder(); }
+
+          const icon = item.isDirectory ? "📁" : "📄";
+          const cid = item.isDirectory ? `D_OPEN_DIR_${item.relativePath.slice(0, 30)}` : `D_FILE_MENU_${item.relativePath.slice(0, 30)}`;
+          currentRow.addComponents(new ButtonBuilder().setCustomId(cid).setLabel(`${icon} ${item.name.slice(0, 15)}`).setStyle(item.isDirectory ? ButtonStyle.Primary : ButtonStyle.Secondary));
+        });
+        dynamicRows.push(currentRow);
+        dynamicRows.push(createBackToMainRow());
+
+        inter.editReply({ content: `📁 **متصفح ملفات السيرفر حياً:**\n📂 المسار الحالي: \`${prefix}/${targetPath}\`\n\n_انقر على المجلدات الزرقاء للتصفح، أو الملفات الرمادية لفتح قائمة التحكم بها:_`, components: dynamicRows });
+      }
+    };
+    ws.on('message', handleFilesRequest);
+  }
+
+  // H) Individual targeted file utility controls (Binary fetches & permanent deletions)
   if (buttonClickId.startsWith('D_FILE_MENU_')) {
     const filePath = buttonClickId.replace('D_FILE_MENU_', '');
     const fileRow = new ActionRowBuilder().addComponents(
@@ -294,7 +378,12 @@ client.on('interactionCreate', async (interaction) => {
     );
     return interaction.editReply({ content: `📄 **قائمة التحكم بالملف المعزول:** \`/${filePath}\`\nاختر الإجراء المطلوب لتنفيذه تلقائياً فوراً:`, components: [fileRow] });
   }
+  // ========================================================
+  // 👾 [بوت ديسكورد المطور المصلح - الجزء 5 من 5]
+  // تحميل الملفات، تفاصيل وموارد اللاعب (E)، وإرسال الـ zip المباشر
+  // ========================================================
 
+  // تحميل ملف منفرد باينري وإرساله كمستند حقيقي داخل الديسكورد
   if (buttonClickId.startsWith('D_DOWN_SINGLE_')) {
     const filePath = buttonClickId.replace('D_DOWN_SINGLE_', '');
     ws.send(JSON.stringify({ action: 'DOWNLOAD_SINGLE_FILE', payload: { relativePath: filePath, isPluginArea: isDiscPluginAreaActive } }));
@@ -344,10 +433,6 @@ client.on('interactionCreate', async (interaction) => {
     ws.on('message', handleZipIncoming);
     return;
   }
-  // ========================================================
-  // 👾 [بوت ديسكورد المطور المصلح - الجزء 5 من 5]
-  // تفاصيل اللاعب والموارد المدمجة (E)، ضخ العقوبات، والتشغيل بسلام
-  // ========================================================
 
   // ك) فتح لوحة الإجراءات المباشرة للاعب متصل مع دمج (الموارد أولاً تليها معلومات الحساب)
   if (buttonClickId.startsWith('D_PL_')) {

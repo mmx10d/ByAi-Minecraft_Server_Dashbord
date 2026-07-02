@@ -1,12 +1,12 @@
 /* ==========================================================
-   📡 [Hardened Frontend Core: script.js - Part 1 of 4]
-   WebSocket Life-Cycle Hooks, Global DOM Injections & Option Sync
+   📡 [محرك الويب التفاعلي المصلح - الجزء 1 من 5]
+   تأسيس خط اتصال السوكيت، ومحرك التحديث الحي السلس الصافي
    ========================================================== */
 
-// 1. Establish absolute standalone real-time connection link to socket backend (Port 8080)
+// 1. فتح خط اتصال السوكيت الفوري والمستقل بالخادم المركزي للـ Backend (البورت 8080)
 const ws = new WebSocket('ws://localhost:8080');
 
-// 2. Safely capture and hook DOM interface elements for execution loops
+// 2. جلب وتأمين عناصر واجهة الويب من الـ DOM
 const consoleScreen = document.getElementById('consoleScreen');
 const socketIndicator = document.getElementById('socketIndicator');
 const badgeStatus = document.getElementById('badgeStatus');
@@ -19,27 +19,30 @@ const valPlayers = document.getElementById('valPlayers');
 const countOnline = document.getElementById('countOnline');
 const cmdInput = document.getElementById('cmdInput');
 
-// Table list connection mount targets
+// حاويات جداول اللاعبين الخمسة حياً
 const listOnline = document.getElementById('listOnline');
 const listOps = document.getElementById('listOps');
 const listWhitelist = document.getElementById('listWhitelist');
 const listBanned = document.getElementById('listBanned');
 const listBannedIps = document.getElementById('listBannedIps');
 
-// Isolated Sandbox exploration parameters (World & Plugins folder separation)
+// متغيرات ومستندات مدير ملفات الساند بوكس المعزول
 const fileBrowserList = document.getElementById('fileBrowserList');
 const currentPathDisplay = document.getElementById('currentPathDisplay');
 let currentRelativePath = "";
-let isPluginAreaActive = false; // Switches folder boundaries safely
+let isPluginAreaActive = false;
 
-// WebSocket lifecycle events
+// متغير عالمي لحفظ مصفوفة أسماء اللاعبين أونلاين منعاً لوميض الواجهة غير المبرر
+let cachedOnlinePlayersJson = "";
+
+// مستمع الأحداث عند نجاح فتح خط الاتصال بالسوكيت المركزي
 ws.onopen = () => {
   socketIndicator.innerText = 'WebSocket: متصل 🟢';
   socketIndicator.style.color = '#00e676';
   badgeStatus.innerText = 'متصل بخادم السوكيت المركزي بنجاح';
   badgeStatus.style.color = '#00b0ff';
 
-  // Immediately fetch host diagnostics & configurations upon synchronization
+  // طلب حزمة البيانات الشاملة فور الاتصال لتهيئة الواجهة
   sendAction('GET_HOST_STATS');
   browseFolder('');
 };
@@ -54,7 +57,7 @@ ws.onclose = () => {
   cardStatus.style.borderColor = '#222938';
 };
 
-// Central incoming message hub decoding JSON payloads from index.js
+// معالجة وتحليل حزم الـ JSON المتقدمة الواردة حياً من ملف index.js الرئيسي
 ws.onmessage = (event) => {
   try {
     const packet = JSON.parse(event.data);
@@ -62,7 +65,7 @@ ws.onmessage = (event) => {
     if (packet.type === 'LOG') {
       appendLogLine(packet.data);
     } else if (packet.type === 'HOST_STATS') {
-      // A) Update global computation cards (CPU usage calculation is now fixed)
+      // تحديث كروت الموارد الأربعة العلوية حياً بنعومة مطلقة (سلس ودون لمس بقية الصفحة)
       valStatus.innerText = packet.data.status;
       valRam.innerText = packet.data.ram;
       valCpu.innerText = packet.data.cpu;
@@ -77,14 +80,20 @@ ws.onmessage = (event) => {
         cardStatus.style.borderColor = 'rgba(255, 61, 0, 0.3)';
       }
 
-      // B) Populate real-time entity state tables
-      renderOnlinePlayersList(packet.data.playersOnline || []);
+      // الفحص الحي الذكي للأسماء: يتم تحديث جداول اللاعبين فقط إذا تغيرت محتويات الحزمة فعلياً من السيرفر
+      const currentPlayersJson = JSON.stringify(packet.data.playersOnline);
+      if (currentPlayersJson !== cachedOnlinePlayersJson) {
+        cachedOnlinePlayersJson = currentPlayersJson;
+        renderOnlinePlayersList(packet.data.playersOnline || []);
+      }
+
+      // تحديث القوائم الثابتة بسلاسة
       renderSimpleList(listOps, packet.data.opsList || [], 'deop', '🛡️ سحب OP', 'mini-kick');
       renderSimpleList(listWhitelist, packet.data.whitelistList || [], 'whitelist remove', '❌ إزالة', 'mini-kick');
       renderSimpleList(listBanned, packet.data.bannedPlayersList || [], 'pardon', '🟢 فك حظر', 'mini-unban');
       renderSimpleList(listBannedIps, packet.data.bannedIpsList || [], 'pardon-ip', '🟢 فك آي بي', 'mini-unban');
 
-      // C) Dynamically verify setting statuses with (✅ / ❌) icons
+      // مزامنة وتحديث قيم لوحة خيارات وإعدادات السيرفر
       syncAternosSettingsPanel(packet.data.serverProperties || {});
 
     } else if (packet.type === 'PLAYER_ADVANCED_DATA') {
@@ -94,14 +103,13 @@ ws.onmessage = (event) => {
     } else if (packet.type === 'FILE_TEXT_CONTENT_DATA') {
       openFileInEditor(packet.relativePath, packet.success, packet.data);
     } else if (packet.type === 'BACKUP_ZIP_DOWNLOAD' || packet.type === 'SINGLE_FILE_DOWNLOAD_DATA') {
-      downloadBinaryZipOrFile(packet.fileName, packet.fileData);
+      handleZipOrFileDownloadReady(packet.fileName, packet.fileData);
     }
   } catch (error) {
     appendLogLine(event.data);
   }
 };
 
-// Synchronize toggles using real database property matches
 function syncAternosSettingsPanel(props) {
   if (props['gamemode']) document.getElementById('setGamemode').value = props['gamemode'];
   if (props['difficulty']) document.getElementById('setDifficulty').value = props['difficulty'];
@@ -125,11 +133,11 @@ function syncAternosSettingsPanel(props) {
   }
 }
 /* ==========================================================
-   📡 [Hardened Frontend Core: script.js - Part 2 of 4]
-   In-Game Player Data Arrays & Unified Resource Profiler Panels
+   📡 [محرك الويب التفاعلي المصلح - الجزء 2 من 5]
+   بناء جداول اللاعبين، ونافذة تفاصيل وموارد اللاعب المدمجة
    ========================================================== */
 
-// 5. Build dynamic active player list container with deep profiling triggers
+// 3. دالة بناء جدول اللاعبين المتصلين وتوليد زر كشف تفاصيل الحساب والموارد المدمجة
 function renderOnlinePlayersList(playersArray) {
   listOnline.innerHTML = '';
   if (playersArray.length === 0) {
@@ -152,7 +160,7 @@ function renderOnlinePlayersList(playersArray) {
   });
 }
 
-// 6. Secondary state collection layout utility function
+// 4. دالة بناء القوائم الإدارية الأخرى حياً بسلاسة
 function renderSimpleList(containerElement, dataArray, minecraftCommandPrefix, buttonText, buttonClass) {
   containerElement.innerHTML = '';
   if (dataArray.length === 0) {
@@ -172,25 +180,25 @@ function renderSimpleList(containerElement, dataArray, minecraftCommandPrefix, b
   });
 }
 
-// 7. Requesting and injecting unified inventory statistics and tracking data (E View)
+// 5. محرك كشف وعرض تفاصيل وموارد اللاعب المدمجة (Player Details & Inventory View)
 function requestAdvancedPlayerData(playerName) {
   ws.send(JSON.stringify({ action: 'GET_PLAYER_ADVANCED_DATA', payload: { playerName } }));
 }
 
 function displayAdvancedPlayerDetails(data) {
-  // In-game properties first
+  // الموارد التي بحوزته أولاً في الأعلى
   document.getElementById('advPlayerName').innerText = data.name;
   document.getElementById('invPlayerKills').innerText = data.playerKills;
   document.getElementById('invMobKills').innerText = data.mobKills;
   document.getElementById('invJumps').innerText = data.jumps;
   document.getElementById('invAdvancements').innerText = data.advancementsCount;
 
-  // Connection specifics below
+  // معلومات الحساب والاتصال بالخادم بالأسفل
   document.getElementById('invUuid').innerText = data.uuid;
   document.getElementById('invPlayTime').innerText = data.playTime;
   document.getElementById('invDeaths').innerText = data.deaths;
 
-  // Smoothly draw panel block into view
+  // إظهار اللوحة المنسقة للمستخدم بسلاسة دون إعادة تحميل الصفحة
   document.getElementById('playerAdvancedView').style.display = 'block';
 }
 
@@ -198,11 +206,11 @@ function closePlayerInventory() {
   document.getElementById('playerAdvancedView').style.display = 'none';
 }
 /* ==========================================================
-   📡 [Hardened Frontend Core: script.js - Part 3 of 4]
-   Sandboxed Directory Explorer Tabs & Real-Time File Row Anchors
+   📡 [محرك الويب التفاعلي المصلح - الجزء 3 من 5]
+   متصفح ملفات الساند بوكس المعزول، تبديل مجلدات اللوحة، وحقن عناصر القرص
    ========================================================== */
 
-// 8. Safely isolate and switch workspace boundaries between World and Plugins
+// 6. محرك تبديل واجهات الملفات المعزولة (العالم world أو الإضافات plugins حصراً)
 function switchFileArea(toPluginArea) {
   isPluginAreaActive = toPluginArea;
   const tabWorld = document.getElementById('tabWorldBtn');
@@ -224,11 +232,11 @@ function switchFileArea(toPluginArea) {
     tabPlugins.style.border = '1px solid var(--border-color)';
     currentPathDisp.innerText = "/world";
   }
-  // Instantly traverse back to root node of newly queried sandbox area
+  // تصفح المجلد الرئيسي للمنطقة المحددة فور التبديل
   browseFolder('');
 }
 
-// 9. Dispatching targeted filesystem crawl operations through socket channel
+// 7. محرك تصفح المجلدات المعزول حديدياً عبر السوكيت
 function browseFolder(pathStr) {
   currentRelativePath = pathStr;
   const prefix = isPluginAreaActive ? "/plugins" : "/world";
@@ -247,7 +255,7 @@ function goBackFolder() {
   browseFolder(parts.join('/'));
 }
 
-// 10. Injecting live filesystem nodes dynamically populated with custom file utilities
+// حقن وتوليد عناصر الملفات والمجلدات الحية القادمة من السيرفر
 function renderDirectoryFiles(currentPath, itemsArray) {
   fileBrowserList.innerHTML = '';
   if (itemsArray.length === 0) {
@@ -262,7 +270,7 @@ function renderDirectoryFiles(currentPath, itemsArray) {
     const icon = item.isDirectory ? "📁" : "📄";
     const clickAction = item.isDirectory ? `browseFolder('${item.relativePath}')` : `requestReadFileContent('${item.relativePath}')`;
 
-    // Assembling contextual operations (Rename, Download Single, and Destroy)
+    // بناء عناصر الميتا والأزرار التفاعلية (تحميل، حذف، وإعادة تسمية) لكل ملف ومجلد
     let actionButtons = `<button class="action-mini mini-unban" onclick="triggerRenameModal('${item.relativePath}')">📝 اسم</button>`;
     if (!item.isDirectory) {
       actionButtons += ` <button class="action-mini mini-op" onclick="downloadSingleServerFile('${item.relativePath}')">📥 تحميل</button>`;
@@ -282,13 +290,13 @@ function renderDirectoryFiles(currentPath, itemsArray) {
   });
 }
 /* ==========================================================
-   📡 [محرك الويب التفاعلي الفائق - الجزء 4 من 4]
+   📡 [محرك الويب التفاعلي المصلح - الجزء 4 من 5]
    صناديق التأكيد المخصصة، محرر النصوص، والتحميل والرفع الباينري
    ========================================================== */
 
 let activeModalCallback = null;
 
-// 11. محرك تشغيل وإدارة صناديق التأكيد والمدخلات المخصصة (Custom HTML Modals)
+// 8. محرك تشغيل وإدارة صناديق التأكيد والمدخلات المخصصة (Custom HTML Modals)
 function showCustomModal(title, bodyText, showInput = false, placeholder = '', callback) {
   document.getElementById('customModalTitle').innerText = title;
   document.getElementById('customModalBody').innerText = bodyText;
@@ -320,7 +328,7 @@ document.getElementById('customModalConfirmBtn').onclick = function () {
   closeCustomModal();
 };
 
-// 12. تشغيل صناديق التأكيد المخصصة لعمليات الحذف والاسم وإعادة تصفير العالم
+// 9. تشغيل صناديق التأكيد المخصصة لعمليات الحذف والاسم وإعادة تصفير العالم
 function triggerDeleteFileConfirm(pathStr) {
   showCustomModal('🗑️ تأكيد الحذف الصارم', `هل أنت متأكد تماماً من تدمير وحذف: ${pathStr}؟ لا يمكن التراجع!`, false, '', function () {
     ws.send(JSON.stringify({ action: 'DELETE_FILE_OR_FOLDER', payload: { relativePath: pathStr, isPluginArea: isPluginAreaActive } }));
@@ -342,7 +350,7 @@ function triggerWorldRecreationConfirm() {
   });
 }
 
-// 13. محرر النصوص السحابي، التحميل المنفرد الباينري، ورفع ملفات العالم والبلقنز
+// 10. محرر النصوص السحابي، التحميل المنفرد الباينري، ورفع ملفات العالم والبلقنز
 function requestReadFileContent(pathStr) {
   ws.send(JSON.stringify({ action: 'READ_FILE_TEXT_CONTENT', payload: { relativePath: pathStr, isPluginArea: isPluginAreaActive } }));
 }
@@ -369,11 +377,11 @@ function downloadSingleServerFile(pathStr) {
 }
 
 function handleFileUpload(inputElement) {
-  const file = inputElement.files;
+  const file = inputElement.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function (e) {
-    const base64Data = e.target.result.split(',');
+    const base64Data = e.target.result.split(',')[1];
     const targetUploadPath = currentRelativePath === "" ? file.name : `${currentRelativePath}/${file.name}`;
     ws.send(JSON.stringify({ action: 'UPLOAD_FILE_TO_SERVER', payload: { relativePath: targetUploadPath, fileData: base64Data, isPluginArea: isPluginAreaActive } }));
     showCustomModal('📥 جاري رفع الملف', `يتم الآن ضخ ورفع الملف [${file.name}] إلى خادم الاستضافة...`, false, '', null);
@@ -381,8 +389,12 @@ function handleFileUpload(inputElement) {
   };
   reader.readAsDataURL(file);
 }
+/* ==========================================================
+   📡 [محرك الويب التفاعلي المصلح - الجزء 5 من 5]
+   إرسال الخصائص الصارم، نظام جاهزية تحميل الباك أب النيون، والكونسل
+   ========================================================== */
 
-// 14. إدارة ومزامنة خصائص السيرفر والتحميل التلقائي لملفات الباينري
+// 11. إدارة ومزامنة خصائص السيرفر والتحميل التلقائي لملفات الباينري
 function sendServerProperty(key, value) {
   ws.send(JSON.stringify({ action: 'UPDATE_SERVER_PROPERTY', payload: { key, value } }));
 }
@@ -406,25 +418,34 @@ function saveMaxPlayersSetting() {
   showCustomModal('⚙️ تم حفظ الإعداد', 'تم حفظ الحد الأقصى للاعبين بنجاح، يتطلب ريستارت لتطبيقه.', false, '', null);
 }
 
-function downloadBinaryZipOrFile(fileName, base64String) {
+// دالة جديدة: استقبال ملفات الباك أب والملفات الباينري وبناء جاهزية التحميل الفوري النيون
+function handleZipOrFileDownloadReady(fileName, base64String) {
   const binaryString = atob(base64String);
   const len = binaryString.length;
   const bytes = new Uint8Array(len);
   for (let i = 0; i < len; i++) { bytes[i] = binaryString.charCodeAt(i); }
-
   const blob = new Blob([bytes], { type: 'application/octet-stream' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+
+  // إعادة زر الباك أب لوضعه الطبيعي النظيف فوراً
+  const backupBtn = document.getElementById('btnDownloadBackup');
+  backupBtn.innerHTML = '💾 تنزيل الباك أب (.zip)';
+  backupBtn.disabled = false;
+  backupBtn.style.background = 'var(--accent-purple)';
+
+  // إظهار صندوق التأكيد المطور النيون مع زر بدء التنزيل المباشر فوراً دون وميض الصفحة
+  showCustomModal('📥 جاهزية ملف التحميل السحابي', `تم جمد وضغط الملف [${fileName}] بنجاح وجاهز للسحب الحركي للهاتف أو الكمبيوتر الآن!`, false, '', function () {
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
 }
 
-// 15. الأوامر وسجلات الكونسل والجدولة والتحكم بالقدرة العامة
+// 12. الأوامر وسجلات الكونسل والجدولة والتحكم بالقدرة العامة
 function executeQuickCmd(rawCommand) {
   ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: rawCommand } }));
-  setTimeout(() => sendAction('GET_HOST_STATS'), 1000);
 }
 
 function appendLogLine(text) {
@@ -433,6 +454,7 @@ function appendLogLine(text) {
   if (text.includes('[ERROR]') || text.includes('WARN') || text.includes('Exception')) { line.className += ' log-error'; }
   else if (text.includes('[System]') || text.includes('Connected')) { line.className += ' log-system'; }
   else if (text.includes('Done') || text.includes('joined the game')) { line.className += ' log-info'; }
+  line.innerText = text;
   consoleScreen.appendChild(line);
   consoleScreen.scrollTop = consoleScreen.scrollHeight;
 }
@@ -446,7 +468,6 @@ function sendCommand() {
   if (!text) return;
   ws.send(JSON.stringify({ action: 'MINECRAFT_COMMAND', payload: { command: text } }));
   cmdInput.value = '';
-  setTimeout(() => sendAction('GET_HOST_STATS'), 1200);
 }
 
 document.getElementById('btnStart').onclick = () => sendAction('START_SERVER');
@@ -454,10 +475,23 @@ document.getElementById('btnStop').onclick = () => sendAction('STOP_SERVER');
 document.getElementById('btnRestart').onclick = () => sendAction('RESTART_SERVER');
 document.getElementById('btnRefresh').onclick = () => sendAction('GET_HOST_STATS');
 document.getElementById('btnSend').onclick = () => sendCommand();
-document.getElementById('btnDownloadBackup').onclick = () => {
-  showCustomModal('💾 جاري إنشاء الباك أب', 'يتم الآن ضغط ملفات السيرفر كحزمة zip حية باينري... يرجى عدم قفل الصفحة حتى يبدأ التنزيل.', false, '', null);
-  sendAction('CREATE_ZIP_BACKUP');
+
+// سد ثغرة التحميل وتفعيل عداد الانتظار الذكي النيون
+document.getElementById('btnDownloadBackup').onclick = function () {
+  const backupBtn = this;
+  backupBtn.innerHTML = '⏳ جاري معالجة وتوليد الباك أب الحقيقي...';
+  backupBtn.disabled = true;
+  backupBtn.style.background = '#444';
+
+  // إرسال الأكشن معزولاً وصارماً كـ Action للسوكيت وليس كنص في الكونسل!
+  ws.send(JSON.stringify({ action: 'CREATE_ZIP_BACKUP' }));
 };
+
 cmdInput.addEventListener('keypress', function (e) { if (e.key === 'Enter') sendCommand(); });
 
-setInterval(() => { if (ws.readyState === WebSocket.OPEN) { sendAction('GET_HOST_STATS'); } }, 5000);
+// الجدولة التلقائية الدورية الصافية لتحديث الموارد كل 5 ثوانٍ بدون وميض
+setInterval(() => {
+  if (ws.readyState === WebSocket.OPEN) {
+    sendAction('GET_HOST_STATS');
+  }
+}, 5000);
