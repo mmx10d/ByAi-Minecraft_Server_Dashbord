@@ -10,6 +10,7 @@
 !package.json
 !package-lock.json
 !paper.jar
+!README.md
 
 # استثناء مجلد الأوامر وكل الملفات التي بداخله
 !commands/

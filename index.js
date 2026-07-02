@@ -1,28 +1,48 @@
 const minecraft = require('./minecraft.js');
-const { spawn } = require('child_process');
+const { WebSocketServer } = require('ws');
+const readline = require('readline');
 
-console.log('=== [نظام إدارة ماين كرافت عبر Node.js] ===');
+console.log('=== [نظام إدارة ماين كرافت عبر Node.js & Sockets] ===');
 
-// 1. تشغيل السيرفر
+// 1. تشغيل السيرفر تلقائياً والموافقة على الـ EULA مدمجة داخله
 minecraft.server.startServer();
 
-// 2. ربط مخرجات السيرفر الحية بمحلل البيانات في معلومات الخادم
-// قمنا بتعديل دالة startServer داخلياً في السيرفر لترسل الـ logs هنا
-// لتشغيل المحلل تلقائياً، سنقوم بإنصات بسيط لمخرجات العملية (إن وجدت)
-setTimeout(() => {
-  // عرض مواصفات بيئة التشغيل في الكونسل عند الإقلاع للترحيب بك
-  console.log(`\n[Host Info]: يعمل على جهاز: ${minecraft.host.getHostName()}`);
-  console.log(`[Host Info]: نظام التشغيل: ${minecraft.host.getFullHostName()}`);
-  console.log(`[Host Info]: استهلاك الرام الحالي للجهاز: ${minecraft.host.getRamUsage()}`);
-  console.log(`[Host Info]: البورت المحجوز للسيرفر: ${minecraft.host.getPortNumber()}\n`);
-}, 3000);
+// 2. إنشاء خادم الـ Socket على منفذ مخصص (مثلاً 8080) للتحكم من الـ CMD أو أي كونسل خارجي
+const wss = new WebSocketServer({ port: 8080 });
+console.log('[Socket Server]: يعمل حالياً على المنفذ: ws://localhost:8080');
 
-// مثال لكيفية استخدام الأوامر برمجياً في مشروعك مستقبلاً:
-// يمكنك تجربة فك التعليق عن الأسطر بالأسفل لاختبارها بعد إقلاع السيرفر تماماً:
-/*
-setTimeout(() => {
-    console.log('--- تجربة تغيير الإعدادات تلقائياً ---');
-    minecraft.world.changeGamemode('creative'); // تغيير الوضع الافتراضي لـ كرييتف
-    minecraft.world.setMaxPlayers(50); // رفع الحد الأقصى للاعبين لـ 50
-}, 15000);
-*/
+// ربط مخرجات السيرفر الحية وإرسالها لكل من اتصل بالسوكيت و لمحلل البيانات الحية
+minecraft.server.setLogListener((logLine) => {
+  // 1. تمرير البيانات لمحلل معلومات اللاعبين والسيرفر الحالي
+  minecraft.info.parseServerLog(logLine);
+
+  // 2. بث الـ logs حياً لجميع أجهزة التحكم المتصلة عبر السوكيت
+  wss.clients.forEach((client) => {
+    if (client.readyState === 1) { // 1 تعني OPEN
+      client.send(logLine);
+    }
+  });
+});
+
+// التعامل مع اتصالات السوكيت القادمة (أوامر الـ CMD الخارجية)
+wss.on('connection', (ws) => {
+  console.log('[Socket Server]: تم اتصال متحكم خارجي جديد بالسيرفر.');
+  ws.send('[System]: متصل بنجاح بكود التحكم التابع لماين كرافت!');
+
+  ws.on('message', (message) => {
+    const command = message.toString().trim();
+    console.log(`[Socket Command Received]: ${command}`);
+
+    // تنفيذ الأمر الممرر من السوكيت مباشرة داخل كونسل ماين كرافت
+    minecraft.server.executeCommand(command);
+  });
+});
+
+// إعداد كونسل الـ Terminal المحلي للجهاز الأساسي للتحكم الفوري أيضاً
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+rl.on('line', (line) => {
+  minecraft.server.executeCommand(line);
+});

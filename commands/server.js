@@ -1,63 +1,76 @@
 const { spawn } = require('child_process');
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
-// متغير لحفظ عملية السيرفر في الذاكرة
 let serverProcess = null;
+const eulaPath = path.join(__dirname, '../eula.txt');
+
+// مستمع خارجي لإرسال البيانات إلى السوكيت ومحلل البيانات
+let logListener = () => { };
+
+function setLogListener(listener) {
+  logListener = listener;
+}
 
 /**
- * دالة لتشغيل سيرفر ماين كرافت
+ * دالة للموافقة التلقائية على شروط EULA
  */
+function acceptEula() {
+  try {
+    fs.writeFileSync(eulaPath, 'eula=true', 'utf8');
+    console.log('[Minecraft]: تم الموافقة على شروط EULA بنجاح برمجياً.');
+    return true;
+  } catch (error) {
+    console.error('[Minecraft ERROR]: فشل تعديل ملف eula.txt:', error);
+    return false;
+  }
+}
+
 function startServer() {
   if (serverProcess) {
     console.log('[Minecraft]: السيرفر يعمل بالفعل حالياً!');
     return;
   }
 
-  console.log('[Minecraft]: جاري تشغيل سيرفر ماين كرافت...');
+  // الموافقة التلقائية قبل التشغيل لضمان عدم توقف السيرفر
+  acceptEula();
 
-  // تشغيل ملف paper.jar مع تخصيص الذاكرة العشوائية
+  console.log('[Minecraft]: جاري تشغيل سيرفر ماين كرافت...');
   serverProcess = spawn('java', ['-Xmx2G', '-Xms2G', '-jar', 'paper.jar', 'nogui']);
 
-  // قراءة مخرجات السيرفر وعرضها في الكونسل
   serverProcess.stdout.on('data', (data) => {
-    console.log(`${data.toString().trim()}`);
+    const text = data.toString().trim();
+    console.log(text);
+    logListener(text); // إرسال السجل حياً
   });
 
-  // عرض الأخطاء في حال حدوثها
   serverProcess.stderr.on('data', (data) => {
-    console.error(`[Minecraft ERROR]: ${data}`);
+    const text = data.toString().trim();
+    console.error(`[Minecraft ERROR]: ${text}`);
+    logListener(`[ERROR]: ${text}`);
   });
 
-  // التعامل مع إغلاق السيرفر مفاجئاً أو طبيعياً
   serverProcess.on('close', (code) => {
     console.log(`[Minecraft]: تم إغلاق السيرفر برمز الخروج: ${code}`);
+    logListener(`[System]: Server exited with code ${code}`);
     serverProcess = null;
   });
 }
 
-/**
- * دالة لإغلاق السيرفر بشكل آمن وحفظ العالم
- */
 function stopServer() {
   if (!serverProcess) {
     console.log('[Minecraft]: لا يمكن الإغلاق، السيرفر مطفأ بالفعل.');
     return;
   }
-
   console.log('[Minecraft]: جاري إرسال أمر الإغلاق الآمن للمحافظة على البيانات...');
   executeCommand('stop');
 }
 
-/**
- * دالة لإعادة تشغيل السيرفر
- */
 function restartServer() {
   console.log('[Minecraft]: جاري البدء في عملية إعادة التشغيل...');
-
   if (serverProcess) {
     stopServer();
-
-    // الانتظار حتى يتوقف السيرفر تماماً قبل تشغيله مجدداً لتجنب أخطاء المنافذ
     const checkInterval = setInterval(() => {
       if (!serverProcess) {
         clearInterval(checkInterval);
@@ -69,10 +82,6 @@ function restartServer() {
   }
 }
 
-/**
- * دالة جوهرية لإرسال الأوامر المباشرة لكونسل السيرفر
- * ستستخدمها الملفات الأخرى مثل player.js و world.js
- */
 function executeCommand(command) {
   if (serverProcess && serverProcess.stdin) {
     serverProcess.stdin.write(command + '\n');
@@ -81,20 +90,11 @@ function executeCommand(command) {
   }
 }
 
-// إعداد إدخال الأوامر يدوياً من Terminal الخاص بـ Node.js مباشرة
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-rl.on('line', (line) => {
-  executeCommand(line);
-});
-
-// تصدير الدوال البرمجية لتتمكن الملفات الأخرى من استدعائها
 module.exports = {
   startServer,
   stopServer,
   restartServer,
-  executeCommand
+  executeCommand,
+  acceptEula,
+  setLogListener
 };
