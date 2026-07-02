@@ -1,1 +1,16 @@
-node_modules/
+# تجاهل كل الملفات والمجلدات في الجذر
+/*
+
+# استثناء ملف الـ gitignore
+!.gitignore
+
+# استثناء الملفات المحددة في المجلد الرئيسي
+!index.js
+!minecraft.js
+!package.json
+!package-lock.json
+!paper.jar
+
+# استثناء مجلد الأوامر وكل الملفات التي بداخله
+!commands/
+!commands/**
