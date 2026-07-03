@@ -1,6 +1,6 @@
 // ========================================================
-// 🚀 [ملف index.js المصلح الحديدي - الجزء 1 من 2]
-// السوكيت المركزي المحدث، منع تسريب الأوامر، وبث السجلات الحية
+// 🚀 [ملف index.js المصلح الحديدي المحدث - الجزء 1 من 3]
+// الاستدعاءات، إعداد Express المدمج مع السوكيت، ومنع تسريب الأوامر
 // ========================================================
 
 const minecraft = require('./minecraft.js');
@@ -8,6 +8,8 @@ const { WebSocketServer } = require('ws');
 const readline = require('readline');
 const fs = require('fs');
 const path = require('path');
+const express = require('express'); // 🛠️ إضافة Express ونظام الويب
+const http = require('http');
 
 console.log('========================================================');
 console.log(' ⚡ [نظام النواة السحابي الحديدي - Sandbox Core v3] يعمل... ');
@@ -16,11 +18,22 @@ console.log('========================================================');
 // 1. تشغيل وإقلاع سيرفر ماين كرافت تلقائياً
 minecraft.server.startServer();
 
-// 2. إنشاء وتأمين خادم السوكيت المركزي المستقل على المنفذ 8080
-const wss = new WebSocketServer({ port: 8080 });
-console.log('[Socket Server]: يستمع الآن بأمان على الرابط: ws://localhost:8080');
+// 2. إنشاء وتأمين خادم Express المدمج لتقديم الملفات الثابتة
+const app = express();
+const server = http.createServer(app);
 
-// 3. ربط مخرجات السيرفر الحية وبثها فوراً كـ JSON لكافة الواجهات والبوتات
+// 📂 تقديم مجلد public وصفحة index.html تلقائياً للمتصفح
+app.use(express.static(path.join(__dirname, 'public')));
+
+// 3. دمج وتشغيل خادم السوكيت المركزي المستقل على المنفذ 8080
+const wss = new WebSocketServer({ server: server });
+
+server.listen(8080, () => {
+  console.log('[Express Server]: يعمل ويقدم صفحة الويب على الرابط: http://localhost:8080');
+  console.log('[Socket Server] : يستمع الآن بأمان مدمجاً عبر نفس المنفذ لـ WebSocket.');
+});
+
+// 4. ربط مخرجات السيرفر الحية وبثها فوراً كـ JSON لكافة الواجهات والبوتات
 minecraft.server.setLogListener((logLine) => {
   // تحديث قائمة اللاعبين حياً وحالة السيرفر
   minecraft.info.parseServerLog(logLine);
@@ -37,11 +50,11 @@ minecraft.server.setLogListener((logLine) => {
   });
 });
 // ========================================================
-// 🚀 [ملف index.js المصلح الحديدي - الجزء 2 من 3]
+// 🚀 [ملف index.js المصلح الحديدي المحدث - الجزء 2 من 3]
 // مستمع اتصالات السوكيت، معالج الأوامر المعزول، وأحداث القدرة والخصائص
 // ========================================================
 
-// 4. الإنصات لربط واجهات الويب المستقلة والبوتات ومعالجة حزم البيانات المتقدمة حياً
+// 5. الإنصات لربط واجهات الويب المستقلة والبوتات ومعالجة حزم البيانات المتقدمة حياً
 wss.on('connection', (ws) => {
   console.log('[Socket Server]: متصل إداري جديد انضم لقنوات التحكم السحابية المحدثة v3.');
   ws.send(JSON.stringify({ type: 'SYSTEM', data: 'Connected to Hardened Minecraft Core v3' }));
@@ -127,8 +140,8 @@ wss.on('connection', (ws) => {
           minecraft.world.setCrackAllowed(payload.allowed);
           break;
         // ========================================================
-        // 🚀 [ملف index.js المصلح الحديدي - الجزء 3 من 3]
-        // إعادة إنشاء العالم بالريستارت الفوري، معالجات الساند بوكس، والجدولة
+        // 🚀 [ملف index.js المصلح الحديدي المحدث - الجزء 3 من 3]
+        // إعادة إنشاء العالم، مدير الملفات المطور، الجدولة، والـ Terminal المحلي
         // ========================================================
 
         // 🗺️ إصلاح حديدي: ربط إعادة إنشاء وتصفير العالم بالريستارت الفوري التلقائي لإنتاج خريطة بكر
@@ -215,11 +228,11 @@ wss.on('connection', (ws) => {
   });
 });
 
-// 5. نظام النوم والجدولة الآلي عند الخمول والـ Proxy كل دقيقة
+// 6. نظام النوم والجدولة الآلي عند الخمول والـ Proxy كل دقيقة
 setInterval(() => {
   minecraft.scheduler.checkServerIdle();
 }, 60000);
 
-// 6. تفعيل الـ Terminal المحلي للتحكم اليدوي المباشر في كونسل النواة
+// 7. تفعيل الـ Terminal المحلي للتحكم اليدوي المباشر في كونسل النواة
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 rl.on('line', (line) => { minecraft.server.executeCommand(line); });

@@ -13,8 +13,16 @@
 !README.md
 !nextupdate.txt
 
+
+!export.js
+
+
 # استثناء مجلد الأوامر وكل الملفات التي بداخله
 !commands/
 !commands/**
 !Clients/
 !Clients/**
+!bots/
+!bots/**
+!public/
+!public/**
