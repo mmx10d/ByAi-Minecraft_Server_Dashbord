@@ -1,0 +1,249 @@
+<!-- ========================================================== -->
+<!-- 🖥️ [Upgraded Progress Monitoring Dashboard - Part 1 of 2] -->
+<!-- Live Preparation Loader Bars, Analytics, & Options Sync Grid -->
+<!-- ========================================================== -->
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>⚡ لوحة الإدارة الاحترافية الفائقة - سيرفر ماين كرافت</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <div class="wrapper">
+    <header>
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <h1>⚡ لوحة إدارة السيرفر المتطورة</h1>
+        <!-- 🆕 New Active Initialization Tracker (Underneath Connection) -->
+        <div style="display: flex; align-items: center; gap: 10px; margin-top: 5px;">
+          <span id="preparationStatusBadge"
+            style="font-size: 12px; font-weight: bold; color: var(--text-muted); background: rgba(255,255,255,0.02); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border-color);">الحالة
+            الإجرائية: ممتثل</span>
+          <div id="progressOuterWrapper"
+            style="width: 200px; height: 8px; background: var(--bg-darker); border-radius: 10px; border: 1px solid var(--border-color); display: none; overflow: hidden; position: relative;">
+            <div id="progressInnerBar"
+              style="width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-green)); transition: width 0.2s ease;">
+            </div>
+          </div>
+          <span id="progressPercentText"
+            style="font-size: 12px; font-family: monospace; font-weight: bold; color: var(--accent-green); display: none;">0%</span>
+        </div>
+      </div>
+      <div class="server-badge" id="badgeStatus">جاري فحص حالة الاتصال...</div>
+    </header>
+
+    <!-- Real-Time Computational Hardware and Connection Diagnostics -->
+    <div class="stats-grid">
+      <div class="stat-card status" id="cardStatus">
+        <span class="stat-label">حالة السيرفر الحية</span>
+        <span class="stat-value" id="valStatus">OFFLINE</span>
+      </div>
+      <div class="stat-card ram">
+        <span class="stat-label">استهلاك الذاكرة (RAM)</span>
+        <span class="stat-value" id="valRam">0.00%</span>
+      </div>
+      <div class="stat-card cpu">
+        <span class="stat-label">استهلاك المعالج (CPU)</span>
+        <span class="stat-value" id="valCpu">0.00%</span>
+      </div>
+      <div class="stat-card players">
+        <span class="stat-label">اللاعبين المتصلين</span>
+        <span class="stat-value" id="valPlayers">0</span>
+      </div>
+    </div>
+
+    <!-- System Runtime Controls, Dynamic Backups, and Reset Operations -->
+    <div class="controls-row">
+      <button class="btn btn-start" id="btnStart">▶ تشغيل السيرفر</button>
+      <button class="btn btn-stop" id="btnStop">⏹ إيقاف آمن</button>
+      <button class="btn btn-restart" id="btnRestart">🔄 إعادة تشغيل</button>
+      <!-- حدث خطا بالعمليه لقد ارهق تفكيري ساكمله لاحقا مع التحديثات -->
+      <button class="btn btn-backup" id="btnDownloadBackup" style="display: none;">💾 تنزيل الباك أب (.zip)</button>
+      <button class="btn btn-stop" style="background:#b30000;" onclick="triggerWorldRecreationConfirm()">🗺️ تصفير
+        وإعادة إنشاء العالم</button>
+      <button class="btn btn-refresh" id="btnRefresh">📊 تحديث يدوي للموارد</button>
+    </div>
+
+    <!-- Real-Time Option Synchronizer Control Grid Grid layout -->
+    <div class="full-panel-section">
+      <h3>⚙️ لوحة تعديل إعدادات وخصائص السيرفر الحية</h3>
+      <div class="options-settings-grid">
+        <div class="setting-opt-box">
+          <label>🎮 وضع اللعب الافتراضي (Gamemode):</label>
+          <select id="setGamemode" onchange="sendServerProperty('gamemode', this.value)">
+            <option value="survival">Survival (البقاء)</option>
+            <option value="creative">Creative (الإبداعي)</option>
+            <option value="adventure">Adventure (المغامرة)</option>
+            <option value="spectator">Spectator (المشاهد)</option>
+          </select>
+        </div>
+        <div class="setting-opt-box">
+          <label>☠️ صعوبة العالم (Difficulty):</label>
+          <select id="setDifficulty" onchange="sendServerProperty('difficulty', this.value)">
+            <option value="peaceful">Peaceful (سلمي)</option>
+            <option value="easy">Easy (سهل)</option>
+            <option value="normal">Normal (عادي)</option>
+            <option value="hard">Hard (صعب)</option>
+          </select>
+        </div>
+        <div class="setting-opt-box">
+          <label>🔓 وضع الدخول المكرك (Crack):</label>
+          <button class="toggle-btn" id="toggleCrack" onclick="toggleServerFeature('online-mode')">---</button>
+        </div>
+        <div class="setting-opt-box">
+          <label>🛡️ القائمة البيضاء (Whitelist):</label>
+          <button class="toggle-btn" id="toggleWhitelist" onclick="toggleServerFeature('white-list')">---</button>
+        </div>
+        <div class="setting-opt-box">
+          <label>👥 الحد الأقصى للاعبين (Max Players):</label>
+          <div style="display:flex; gap:5px;">
+            <input type="number" id="setMaxPlayersInput" value="20"
+              style="width:80px; padding:5px; background:var(--bg-secondary); border:1px solid var(--border-color); color:#fff; border-radius:4px; text-align:center;">
+            <button class="action-mini mini-op" onclick="saveMaxPlayersSetting()">حفظ</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- ========================================================== -->
+    <!-- 🖥️ [Upgraded Progress Monitoring Dashboard - Part 2 of 2] -->
+    <!-- Real-Time Data Tables, File Tabs, & Custom Modal Anchors -->
+    <!-- ========================================================== -->
+    
+    <!-- Live Content Data Tables for Unified Server Monitoring -->
+    <div class="management-grid">
+      <div class="manage-box">
+        <h3>👥 المتصلون حالياً (<span id="countOnline">0</span>)</h3>
+        <div class="list-container" id="listOnline"></div>
+      </div>
+      <div class="manage-box">
+        <h3>👑 المسؤولين (OP)</h3>
+        <div class="list-container" id="listOps"></div>
+      </div>
+      <div class="manage-box">
+        <h3>🛡️ القائمة البيضاء (Whitelist)</h3>
+        <div class="list-container" id="listWhitelist"></div>
+      </div>
+      <div class="manage-box">
+        <h3>🚫 المحظورين (Banned)</h3>
+        <div class="list-container" id="listBanned"></div>
+      </div>
+      <div class="manage-box">
+        <h3>📟 الآي بي المحظور (Banned IPs)</h3>
+        <div class="list-container" id="listBannedIps"></div>
+      </div>
+    </div>
+    
+    <!-- Unified Player Profiler Interface Panel (Held Items & Stats View) -->
+    <div class="full-panel-section" id="playerAdvancedView" style="display:none;">
+      <div class="inventory-header">
+        <h3>🧰 تفاصيل وموارد اللاعب: <span id="advPlayerName" style="color:var(--accent-blue);">---</span></h3>
+        <button class="action-mini mini-kick" onclick="closePlayerInventory()">❌ إغلاق النافذة</button>
+      </div>
+      <div class="inventory-grid">
+        <!-- Active Held In-Game Inventory Resources -->
+        <div class="inv-slot"
+          style="grid-column: 1 / -1; background: rgba(255, 215, 0, 0.03); border-color: rgba(255, 215, 0, 0.2); font-weight: bold; color: var(--accent-gold);">
+          🎒 الموارد والإحصائيات التي بحوزة اللاعب حالياً:</div>
+        <div class="inv-slot"><span class="inv-label">⚔️ قتلى اللاعبين:</span> <span id="invPlayerKills"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🏹 قتلى الوحوش (Mob Kills):</span> <span id="invMobKills"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🦘 إجمالي القفزات (Jumps):</span> <span id="invJumps"
+            class="inv-val">0</span></div>
+        <div class="inv-slot"><span class="inv-label">🏆 الإنجازات المفتوحة (Advancements):</span> <span
+            id="invAdvancements" class="inv-val">0</span></div>
+    
+        <!-- System Connection Variables Underneath -->
+        <div class="inv-slot"
+          style="grid-column: 1 / -1; background: rgba(0, 176, 255, 0.03); border-color: rgba(0, 176, 255, 0.2); font-weight: bold; color: var(--accent-blue); margin-top: 10px;">
+          ℹ️ معلومات الحساب والاتصال بالخادم:</div>
+        <div class="inv-slot"><span class="inv-label">🆔 المعرف الفريد UUID الرقمي:</span> <span id="invUuid"
+            class="inv-val" style="font-size:12px; color:var(--text-main);">---</span></div>
+        <div class="inv-slot"><span class="inv-label">⏱️ إجمالي وقت اللعب بالسيرفر:</span> <span id="invPlayTime"
+            class="inv-val">---</span></div>
+        <div class="inv-slot"><span class="inv-label">💀 عدد مرات الموت الإجمالية:</span> <span id="invDeaths"
+            class="inv-val" style="color:var(--accent-red);">0</span></div>
+      </div>
+    </div>
+    
+    <!-- Hardened Sandbox File Navigation (Exploration & Plugin Asset Deployer) -->
+    <div class="full-panel-section">
+      <div class="file-manager-header">
+        <div style="display:flex; gap:15px; align-items:center;">
+          <h3>📁 مدير ومتصفح ملفات السيرفر</h3>
+          <!-- Area Tab Buttons to Switch Directories Safely -->
+          <button class="action-mini mini-unban" id="tabWorldBtn" onclick="switchFileArea(false)"
+            style="padding: 6px 12px; font-size:12px; background:var(--accent-blue); color:#000;">🗺️ ملفات العالم
+            (World)</button>
+          <button class="action-mini mini-unban" id="tabPluginsBtn" onclick="switchFileArea(true)"
+            style="padding: 6px 12px; font-size:12px; background:transparent; color:var(--text-main); border:1px solid var(--border-color);">🔌
+            إضافات السيرفر (Plugins)</button>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 5px;">
+          <span id="currentPathDisplay"
+            style="color:var(--text-muted); font-family:monospace; font-size:13px;">/world</span>
+          <button class="action-mini mini-unban" onclick="browseFolder('')" title="العودة للمجلد الرئيسي المعزول">🏠
+            الرئيسي</button>
+          <button class="action-mini mini-unban" onclick="goBackFolder()" title="المجلد الأعلى">⬆️ للأعلى</button>
+          <label class="action-mini mini-op" id="lblUploadBtn" style="cursor:pointer;" title="رفع ملف لهذا المجلد">
+            📥 رفع ملف <input type="file" id="fileUploadInput" onchange="handleFileUpload(this)" style="display:none;">
+          </label>
+        </div>
+      </div>
+      <!-- File Explorer Tree List Mount Target -->
+      <div class="file-browser-container" id="fileBrowserList"></div>
+    </div>
+    
+    <!-- Scurry Cloud Text Engine Configuration Editor -->
+    <div class="full-panel-section" id="fileEditorSection" style="display:none;">
+      <div class="inventory-header">
+        <h3>📝 محرر النصوص السحابي للملف: <span id="editingFileName" style="color:var(--accent-green);">---</span></h3>
+        <div>
+          <button class="action-mini mini-op" onclick="saveEditingFile()">💾 حفظ التعديلات</button>
+          <button class="action-mini mini-kick" onclick="closeFileEditor()">❌ إغلاق</button>
+        </div>
+      </div>
+      <textarea id="fileEditorTextArea" rows="15"
+        style="width:100%; background:var(--bg-darker); border:1px solid var(--border-color); color:#fff; font-family:monospace; padding:15px; outline:none; border-radius:6px; font-size:13px; resize:vertical; line-height:1.5; margin-top:10px;"></textarea>
+    </div>
+    
+    <!-- Terminal Shell Broadcast Terminal Viewbox -->
+    <div class="console-container">
+      <div class="console-header">
+        <span>شاشة الكونسل ومخرجات السيرفر الحية</span>
+        <span id="socketIndicator">WebSocket: جاري الاتصال...</span>
+      </div>
+      <div class="console-screen" id="consoleScreen"></div>
+      <div class="console-input-wrapper">
+        <span>&gt;</span>
+        <input type="text" id="cmdInput" class="console-input"
+          placeholder="اكتب أمر السيرفر هنا واضغط Enter للخط المباشر...">
+        <button class="btn-send" id="btnSend">تنفيذ</button>
+      </div>
+    </div>
+    </div>
+    
+    <!-- Hardened Custom Prompt Overlay Boxes -->
+    <div id="customModalContainer" class="custom-modal-overlay" style="display:none;">
+      <div class="custom-modal-box">
+        <div class="custom-modal-header" id="customModalTitle">⚠️ تأكيد النظام الصارم</div>
+        <div class="custom-modal-body" id="customModalBody">هل أنت متأكد تماماً من تنفيذ هذا الإجراء الحساس؟</div>
+        <!-- Dynamic input string node injection for rename operations -->
+        <input type="text" id="customModalInput" class="console-input"
+          style="display:none; background:var(--bg-darker); border:1px solid var(--border-color); margin-top:15px; padding:10px; border-radius:6px; color:#fff;"
+          placeholder="اكتب الاسم الجديد هنا...">
+        <div class="custom-modal-footer">
+          <button class="btn-confirm-action" id="customModalConfirmBtn">تأكيد ونقر</button>
+          <button class="btn-cancel-action" id="customModalCancelBtn" onclick="closeCustomModal()">إلغاء</button>
+        </div>
+      </div>
+    </div>
+    
+    <script src="script.js"></script>
+    </body>
+    
+    </html>

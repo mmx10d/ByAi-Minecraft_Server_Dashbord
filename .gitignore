@@ -1,30 +1,20 @@
-#لن يتم تجاهل الملفات الاساسيه في البناء
+# تجاهل كل الملفات والمجلدات في الجذر
+/*
 
-#تجاهل مجلد الموديلز
-node_module/
+# استثناء ملف الـ gitignore
+!.gitignore
 
+# استثناء الملفات المحددة في المجلد الرئيسي
+!index.js
+!minecraft.js
+!package.json
+!package-lock.json
+!paper.jar
+!README.md
+!nextupdate.txt
 
-#تجاهل الملفات الغير اساسيه
-cache/
-config/
-libraries/
-logs/
-node_modules/
-plugins/
-versions/
-world/
-banned-ips.json
-banned-players.json
-bukkit.yml
-commands.yml
-eula.txt
-help.yml
-ops.json
-permissions.yml
-server.properties
-spigot.yml
-usercache.json
-version_history.json
-whitelist.json
-
-crash-reports/
+# استثناء مجلد الأوامر وكل الملفات التي بداخله
+!commands/
+!commands/**
+!Clients/
+!Clients/**
