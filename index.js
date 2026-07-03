@@ -25,11 +25,11 @@ const server = http.createServer(app);
 // 📂 تقديم مجلد public وصفحة index.html تلقائياً للمتصفح
 app.use(express.static(path.join(__dirname, 'public')));
 
-// 3. دمج وتشغيل خادم السوكيت المركزي المستقل على المنفذ 8080
+// 3. دمج وتشغيل خادم السوكيت المركزي المستقل على المنفذ 3000
 const wss = new WebSocketServer({ server: server });
 
-server.listen(8080, () => {
-  console.log('[Express Server]: يعمل ويقدم صفحة الويب على الرابط: http://localhost:8080');
+server.listen(3000, () => {
+  console.log('[Express Server]: يعمل ويقدم صفحة الويب على الرابط: http://localhost:3000');
   console.log('[Socket Server] : يستمع الآن بأمان مدمجاً عبر نفس المنفذ لـ WebSocket.');
 });
 
